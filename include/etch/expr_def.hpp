@@ -11,8 +11,13 @@ namespace etch::parser {
 
 	const expr_type expr = "expr";
 
-	const auto ws = x3::omit[*x3::space];
-	const auto expr_def = x3::char_ >> ws >> x3::int_ >> ws >> x3::int_;
+	const auto space = x3::char_(" \r\n\t\v\f");
+	const auto ws = x3::omit[*space];
+
+	const auto op = x3::char_;
+	const auto number = x3::int_;
+
+	const auto expr_def = number >> ws >> op >> ws >> number;
 
 	BOOST_SPIRIT_DEFINE(expr)
 } // namespace etch::parser

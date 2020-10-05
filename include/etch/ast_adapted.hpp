@@ -6,7 +6,7 @@
 
 BOOST_FUSION_ADAPT_STRUCT(
 	etch::ast::expr,
-	op, lhs, rhs
+	lhs, op, rhs
 )
 
 #endif

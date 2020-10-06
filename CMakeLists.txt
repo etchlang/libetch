@@ -99,3 +99,8 @@ if(ENABLE_CLANG_TIDY)
 		set_property(TARGET etch PROPERTY CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE};-checks=${CLANG_TIDY_CHECKS};-header-filter='${CMAKE_CURRENT_SOURCE_DIR}/include/etch'")
 	endif()
 endif()
+
+get_directory_property(HAS_PARENT PARENT_DIRECTORY)
+if(HAS_PARENT)
+	set(ETCH_INCLUDE_DIRS ${ETCH_INCLUDE_DIRS} PARENT_SCOPE)
+endif()

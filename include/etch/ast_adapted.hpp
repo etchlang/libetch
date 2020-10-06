@@ -5,8 +5,8 @@
 #include <etch/ast.hpp>
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::expr,
-	lhs, op, rhs
+	etch::ast::op,
+	lhs, opname, rhs
 )
 
 #endif

@@ -1,5 +1,3 @@
-#include <etch/ast_adapted.hpp>
-#include <etch/expr.hpp>
 #include <etch/parser.hpp>
 
 namespace etch {
@@ -11,7 +9,12 @@ namespace etch {
 		auto it = sv.begin();
 		auto end = sv.end();
 
-		x3::parse(it, end, expr(), ast);
+		auto r = x3::parse(it, end, expr(), ast);
+
+		if(!r) {
+			throw std::runtime_error("error");
+		}
+
 		return ast;
 	}
 } // namespace etch

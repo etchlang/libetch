@@ -2,6 +2,8 @@
 #define ETCH_PARSER_HPP 1
 
 #include <etch/ast.hpp>
+#include <etch/ast_adapted.hpp>
+#include <etch/expr.hpp>
 #include <string_view>
 
 namespace etch {

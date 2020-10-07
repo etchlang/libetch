@@ -33,8 +33,8 @@ namespace etch::parser {
 	                       | x3::char_('/') | x3::char_('>') | x3::char_('<')
 	                       | x3::char_('=');
 
-	const auto char_ident_first = x3::char_("A-Za-z");
-	const auto char_ident_rest  = x3::char_("A-Za-z0-9");
+	const auto char_ident_first = x3::char_("A-Za-z_");
+	const auto char_ident_rest  = x3::char_("A-Za-z_0-9");
 
 	const auto ws = x3::omit[*char_space];
 

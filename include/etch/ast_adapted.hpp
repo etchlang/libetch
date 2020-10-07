@@ -24,4 +24,9 @@ BOOST_FUSION_ADAPT_STRUCT(
 	lhs, opname, rhs
 )
 
+BOOST_FUSION_ADAPT_STRUCT(
+	etch::ast::typed<etch::ast::primary>,
+	value, type
+)
+
 #endif

@@ -8,7 +8,9 @@
 namespace etch::ast {
 	namespace x3 = boost::spirit::x3;
 
-	struct block : std::vector<struct expr> {};
+	template<typename> struct typed;
+
+	struct block : std::vector<struct statement> {};
 
 	struct tuple : std::vector<struct expr> {};
 
@@ -29,7 +31,8 @@ namespace etch::ast {
 	};
 
 	struct atom : x3::variant<
-		primary
+		primary,
+		x3::forward_ast<typed<primary>>
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
@@ -61,7 +64,8 @@ namespace etch::ast {
 
 	struct module : std::vector<statement> {};
 
-	struct arglist : std::vector<identifier> {};
+	using arg = atom;
+	struct arglist : std::vector<arg> {};
 
 	struct function {
 		arglist args;
@@ -79,6 +83,12 @@ namespace etch::ast {
 		compound rhs;
 	};
 
+	template<typename T>
+	struct typed {
+		T value;
+		atom type;
+	};
+
 	// diagnostics
 
 	inline std::ostream & dump_depth(std::ostream &s, size_t depth) {
@@ -86,9 +96,24 @@ namespace etch::ast {
 		return s;
 	}
 
+	template<typename T>
+	inline std::ostream & dump(std::ostream &s, const typed<T> &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(typed" << std::endl;
+		dump(s, x.value, depth + 1) << std::endl;
+		dump(s, x.type, depth + 1) << std::endl;
+		return dump_depth(s, depth) << ')';
+	}
+
+	template<typename T>
+	inline std::ostream & dump(std::ostream &s, const x3::forward_ast<typed<T>> &x, size_t depth = 0) {
+		return dump(s, x.get(), depth);
+	}
+
 	template<typename... Ts>
 	inline std::ostream & dump(std::ostream &s, const x3::variant<Ts...> &x, size_t depth = 0) {
-		boost::apply_visitor([&s, &depth](auto &&v) { dump(s, v, depth); }, x);
+		boost::apply_visitor([&s, &depth](auto &&v) {
+			dump(s, v, depth);
+		}, x);
 		return s;
 	}
 

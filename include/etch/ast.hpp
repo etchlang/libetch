@@ -8,10 +8,32 @@
 namespace etch::ast {
 	namespace x3 = boost::spirit::x3;
 
-	struct op;
+	using integer = int32_t;
+	using identifier = std::string;
+
+	struct tuple {
+		std::vector<struct expr> exprs;
+
+		const auto begin() const { return exprs.begin(); }
+		const auto end() const { return exprs.end(); }
+		auto begin() { return exprs.begin(); }
+		auto end() { return exprs.end(); }
+	};
+
+	struct block {
+		std::vector<struct expr> exprs;
+
+		const auto begin() const { return exprs.begin(); }
+		const auto end() const { return exprs.end(); }
+		auto begin() { return exprs.begin(); }
+		auto end() { return exprs.end(); }
+	};
 
 	struct primary : x3::variant<
-		int32_t
+		integer,
+		identifier,
+		tuple,
+		block
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
@@ -26,7 +48,7 @@ namespace etch::ast {
 
 	struct compound : x3::variant<
 		atom,
-		x3::forward_ast<op>
+		x3::forward_ast<struct op>
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
@@ -45,14 +67,38 @@ namespace etch::ast {
 		compound rhs;
 	};
 
-	inline std::ostream & dump(std::ostream &s, const int32_t &x) {
-		return s << "(number " << x << ')';
-	}
+	// diagnostics
 
 	template<typename... Ts>
 	inline std::ostream & dump(std::ostream &s, const x3::variant<Ts...> &x) {
 		boost::apply_visitor([&s](auto &&v) { dump(s, v); }, x);
 		return s;
+	}
+
+	inline std::ostream & dump(std::ostream &s, const integer &x) {
+		return s << "(integer " << x << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const identifier &x) {
+		return s << "(identifier " << x << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const tuple &x) {
+		s << "(tuple";
+		for(auto &e : x) {
+			s << ' ';
+			dump(s, e);
+		}
+		return s << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const block &x) {
+		s << "(block";
+		for(auto &e : x) {
+			s << ' ';
+			dump(s, e);
+		}
+		return s << ')';
 	}
 
 	inline std::ostream & dump(std::ostream &s, const op &x) {

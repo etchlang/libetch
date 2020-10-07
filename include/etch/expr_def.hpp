@@ -9,41 +9,43 @@
 namespace etch::parser {
 	namespace x3 = boost::spirit::x3;
 
-	// rule IDs
-
-	struct compound_class;
-	struct atom_class;
-	struct primary_class;
-	struct op_class;
-
 	// rules
 
-	const expr_type expr                                   = "expr";
-	const x3::rule<compound_class, ast::compound> compound = "compound";
-	const x3::rule<atom_class,     ast::atom>     atom     = "atom";
-	const x3::rule<primary_class,  ast::primary>  primary  = "primary";
-	const x3::rule<op_class,       ast::op>       op       = "op";
+	const expr_type expr;
+	const x3::rule<struct compound_class,   ast::compound>   compound;
+	const x3::rule<struct atom_class,       ast::atom>       atom;
+	const x3::rule<struct primary_class,    ast::primary>    primary;
+	const x3::rule<struct op_class,         ast::op>         op;
+	const x3::rule<struct block_class,      ast::block>      block;
+	const x3::rule<struct tuple_class,      ast::tuple>      tuple;
+	const x3::rule<struct identifier_class, ast::identifier> identifier;
+	const x3::rule<struct integer_class,    ast::integer>    integer;
 
 	// grammar
 
 	const auto char_space  = x3::char_(" \r\n\t\v\f");
-	const auto char_opname = x3::char_('+')
-	                       | x3::char_('-')
-	                       | x3::char_('*')
-	                       | x3::char_('/');
+	const auto char_opname = x3::char_('+') | x3::char_('-') | x3::char_('*')
+	                       | x3::char_('/') | x3::char_('=') | x3::char_('>')
+	                       | x3::char_('<');
+
+	const auto char_ident_first = x3::char_("A-Za-z");
+	const auto char_ident_rest  = x3::char_("A-Za-z0-9");
 
 	const auto ws = x3::omit[*char_space];
 
-	const auto number = ws >> x3::int_ >> ws;
-	const auto opname = ws >> *char_opname >> ws;
+	const auto opname = ws >> +char_opname >> ws;
 
-	const auto expr_def     = compound;
-	const auto compound_def = op | atom;
-	const auto atom_def     = primary;
-	const auto primary_def  = number;
-	const auto op_def       = atom >> opname >> compound;
+	const auto expr_def       = compound;
+	const auto compound_def   = op | atom;
+	const auto atom_def       = primary;
+	const auto primary_def    = block | tuple | identifier | integer;
+	const auto op_def         = atom >> opname >> compound;
+	const auto block_def      = ws >> '{' >> *expr >> '}' >> ws;
+	const auto tuple_def      = ws >> '(' >> (expr % ',') >> ')' >> ws;
+	const auto identifier_def = ws >> char_ident_first >> *char_ident_rest >> ws;
+	const auto integer_def    = ws >> x3::int_ >> ws;
 
-	BOOST_SPIRIT_DEFINE(expr, compound, atom, primary, op)
+	BOOST_SPIRIT_DEFINE(expr, compound, atom, primary, op, block, tuple, identifier, integer)
 } // namespace etch::parser
 
 namespace etch {

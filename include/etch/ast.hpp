@@ -73,62 +73,68 @@ namespace etch::ast {
 
 	// diagnostics
 
+	inline std::ostream & dump_depth(std::ostream &s, size_t depth) {
+		for(size_t i = 0; i < depth; ++i) { s << "| "; }
+		return s;
+	}
+
 	template<typename... Ts>
-	inline std::ostream & dump(std::ostream &s, const x3::variant<Ts...> &x) {
-		boost::apply_visitor([&s](auto &&v) { dump(s, v); }, x);
+	inline std::ostream & dump(std::ostream &s, const x3::variant<Ts...> &x, size_t depth = 0) {
+		boost::apply_visitor([&s, &depth](auto &&v) { dump(s, v, depth); }, x);
 		return s;
 	}
 
-	inline std::ostream & dump(std::ostream &s, const op &x) {
-		s << "(op " << x.opname << ' ';
-		dump(s, x.lhs);
-		s << ' ';
-		dump(s, x.rhs);
-		s << ')';
-		return s;
+	inline std::ostream & dump(std::ostream &s, const op &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(op" << std::endl;
+		dump_depth(s, depth + 1) << x.opname << std::endl;
+		dump(s, x.lhs, depth + 1) << std::endl;
+		dump(s, x.rhs, depth + 1) << std::endl;
+		return dump_depth(s, depth) << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const block &x) {
-		s << "(block";
+	inline std::ostream & dump(std::ostream &s, const block &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(block" << std::endl;
+
 		for(auto &e : x) {
-			s << ' ';
-			dump(s, e);
+			dump(s, e, depth + 1) << std::endl;
 		}
-		return s << ')';
+
+		return dump_depth(s, depth) << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const tuple &x) {
-		s << "(tuple";
+	inline std::ostream & dump(std::ostream &s, const tuple &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(tuple" << std::endl;
+
 		for(auto &e : x) {
-			s << ' ';
-			dump(s, e);
+			dump(s, e, depth + 1) << std::endl;
 		}
-		return s << ')';
+
+		return dump_depth(s, depth) << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const identifier &x) {
-		return s << "(identifier " << x << ')';
+	inline std::ostream & dump(std::ostream &s, const identifier &x, size_t depth = 0) {
+		return dump_depth(s, depth) << "(identifier " << x << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const integer &x) {
-		return s << "(integer " << x.value << ')';
+	inline std::ostream & dump(std::ostream &s, const integer &x, size_t depth = 0) {
+		return dump_depth(s, depth) << "(integer " << x.value << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const definition &x) {
-		s << "(definition ";
-		dump(s, x.name);
-		s << ' ';
-		dump(s, x.value);
-		return s << ')';
+	inline std::ostream & dump(std::ostream &s, const definition &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(definition" << std::endl;
+		dump(s, x.name, depth + 1) << std::endl;
+		dump(s, x.value, depth + 1) << std::endl;
+		return dump_depth(s, depth) << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const module &x) {
-		s << "(module";
+	inline std::ostream & dump(std::ostream &s, const module &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(module" << std::endl;
+
 		for(auto &e : x) {
-			s << ' ';
-			dump(s, e);
+			dump(s, e, depth + 1) << std::endl;
 		}
-		return s << ')';
+
+		return dump_depth(s, depth) << ')';
 	}
 } // namespace etch::ast
 

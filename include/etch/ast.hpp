@@ -44,26 +44,32 @@ namespace etch::ast {
 	};
 
 	struct expr : x3::variant<
-		compound
+		compound,
+		x3::forward_ast<struct function>
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
 	};
 
-	struct definition {
-		identifier name;
-		expr value;
-	};
-
 	struct statement : x3::variant<
-		definition,
-		expr
+		expr,
+		x3::forward_ast<struct definition>
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
 	};
 
 	struct module : std::vector<statement> {};
+
+	struct function {
+		std::vector<identifier> args;
+		expr value;
+	};
+
+	struct definition {
+		identifier name;
+		expr value;
+	};
 
 	struct op {
 		std::string opname;
@@ -94,21 +100,17 @@ namespace etch::ast {
 
 	inline std::ostream & dump(std::ostream &s, const block &x, size_t depth = 0) {
 		dump_depth(s, depth) << "(block" << std::endl;
-
 		for(auto &e : x) {
 			dump(s, e, depth + 1) << std::endl;
 		}
-
 		return dump_depth(s, depth) << ')';
 	}
 
 	inline std::ostream & dump(std::ostream &s, const tuple &x, size_t depth = 0) {
 		dump_depth(s, depth) << "(tuple" << std::endl;
-
 		for(auto &e : x) {
 			dump(s, e, depth + 1) << std::endl;
 		}
-
 		return dump_depth(s, depth) << ')';
 	}
 
@@ -127,13 +129,20 @@ namespace etch::ast {
 		return dump_depth(s, depth) << ')';
 	}
 
+	inline std::ostream & dump(std::ostream &s, const function &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(function" << std::endl;
+		for(auto &e : x.args) {
+			dump(s, e, depth + 1) << std::endl;
+		}
+		dump(s, x.value, depth + 1) << std::endl;
+		return dump_depth(s, depth) << ')';
+	}
+
 	inline std::ostream & dump(std::ostream &s, const module &x, size_t depth = 0) {
 		dump_depth(s, depth) << "(module" << std::endl;
-
 		for(auto &e : x) {
 			dump(s, e, depth + 1) << std::endl;
 		}
-
 		return dump_depth(s, depth) << ')';
 	}
 } // namespace etch::ast

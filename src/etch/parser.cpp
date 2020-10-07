@@ -11,7 +11,7 @@ namespace etch {
 
 		auto r = x3::parse(it, end, expr(), ast);
 
-		if(!r) {
+		if(!r || it != end) {
 			throw std::runtime_error("error");
 		}
 

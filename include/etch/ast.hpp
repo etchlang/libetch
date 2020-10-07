@@ -8,32 +8,21 @@
 namespace etch::ast {
 	namespace x3 = boost::spirit::x3;
 
-	using integer = int32_t;
-	using identifier = std::string;
+	struct block : std::vector<struct expr> {};
 
-	struct tuple {
-		std::vector<struct expr> exprs;
+	struct tuple : std::vector<struct expr> {};
 
-		const auto begin() const { return exprs.begin(); }
-		const auto end() const { return exprs.end(); }
-		auto begin() { return exprs.begin(); }
-		auto end() { return exprs.end(); }
-	};
+	struct identifier : std::string {};
 
-	struct block {
-		std::vector<struct expr> exprs;
-
-		const auto begin() const { return exprs.begin(); }
-		const auto end() const { return exprs.end(); }
-		auto begin() { return exprs.begin(); }
-		auto end() { return exprs.end(); }
+	struct integer {
+		int32_t value;
 	};
 
 	struct primary : x3::variant<
 		integer,
 		identifier,
-		tuple,
-		block
+		block,
+		tuple
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
@@ -75,21 +64,13 @@ namespace etch::ast {
 		return s;
 	}
 
-	inline std::ostream & dump(std::ostream &s, const integer &x) {
-		return s << "(integer " << x << ')';
-	}
-
-	inline std::ostream & dump(std::ostream &s, const identifier &x) {
-		return s << "(identifier " << x << ')';
-	}
-
-	inline std::ostream & dump(std::ostream &s, const tuple &x) {
-		s << "(tuple";
-		for(auto &e : x) {
-			s << ' ';
-			dump(s, e);
-		}
-		return s << ')';
+	inline std::ostream & dump(std::ostream &s, const op &x) {
+		s << "(op " << x.opname << ' ';
+		dump(s, x.lhs);
+		s << ' ';
+		dump(s, x.rhs);
+		s << ')';
+		return s;
 	}
 
 	inline std::ostream & dump(std::ostream &s, const block &x) {
@@ -101,13 +82,21 @@ namespace etch::ast {
 		return s << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const op &x) {
-		s << "(op " << x.opname << ' ';
-		dump(s, x.lhs);
-		s << ' ';
-		dump(s, x.rhs);
-		s << ')';
-		return s;
+	inline std::ostream & dump(std::ostream &s, const tuple &x) {
+		s << "(tuple";
+		for(auto &e : x) {
+			s << ' ';
+			dump(s, e);
+		}
+		return s << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const identifier &x) {
+		return s << "(identifier " << x << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const integer &x) {
+		return s << "(integer " << x.value << ')';
 	}
 } // namespace etch::ast
 

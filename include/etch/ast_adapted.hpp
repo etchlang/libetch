@@ -5,13 +5,8 @@
 #include <etch/ast.hpp>
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::tuple,
-	exprs
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::block,
-	exprs
+	etch::ast::integer,
+	value
 )
 
 BOOST_FUSION_ADAPT_STRUCT(

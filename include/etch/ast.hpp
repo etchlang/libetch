@@ -61,8 +61,10 @@ namespace etch::ast {
 
 	struct module : std::vector<statement> {};
 
+	struct arglist : std::vector<identifier> {};
+
 	struct function {
-		std::vector<identifier> args;
+		arglist args;
 		expr value;
 	};
 

@@ -19,6 +19,7 @@ namespace etch::parser {
 	const x3::rule<struct primary_class,    ast::primary>    primary;
 	const x3::rule<struct definition_class, ast::definition> definition;
 	const x3::rule<struct function_class,   ast::function>   function;
+	const x3::rule<struct arglist_class,    ast::arglist>    arglist;
 	const x3::rule<struct op_class,         ast::op>         op;
 	const x3::rule<struct block_class,      ast::block>      block;
 	const x3::rule<struct tuple_class,      ast::tuple>      tuple;
@@ -38,6 +39,9 @@ namespace etch::parser {
 
 	const auto opname = ws >> +char_opname >> ws;
 
+	const auto arglist_def = ws >> '(' >> ws >> -(identifier % ',') >> ws >> ')' >> ws
+	                       | x3::repeat(1)[identifier];
+
 	const auto module_def     = *statement;
 	const auto statement_def  = definition | expr;
 	const auto expr_def       = function | compound;
@@ -45,7 +49,7 @@ namespace etch::parser {
 	const auto atom_def       = primary;
 	const auto primary_def    = block | tuple | identifier | integer;
 	const auto definition_def = identifier >> '=' >> expr;
-	const auto function_def   = ws >> '(' >> -(identifier % ',') >> ')' >> ws >> "->" >> expr;
+	const auto function_def   = arglist >> "->" >> expr;
 	const auto op_def         = atom >> opname >> compound;
 	const auto block_def      = ws >> '{' >> *expr >> '}' >> ws;
 	const auto tuple_def      = ws >> '(' >> -(expr % ',') >> ')' >> ws;
@@ -54,7 +58,7 @@ namespace etch::parser {
 
 	BOOST_SPIRIT_DEFINE(
 		module, statement, expr, compound, atom, primary, definition, function,
-		op, block, tuple, identifier, integer
+		arglist, op, block, tuple, identifier, integer
 	)
 } // namespace etch::parser
 

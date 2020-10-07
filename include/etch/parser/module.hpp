@@ -7,13 +7,13 @@
 namespace etch::parser {
 	namespace x3 = boost::spirit::x3;
 
-	struct expr_class;
-	using expr_type = x3::rule<expr_class, ast::expr>;
-	BOOST_SPIRIT_DECLARE(expr_type)
+	struct module_class;
+	using module_type = x3::rule<module_class, ast::module>;
+	BOOST_SPIRIT_DECLARE(module_type)
 } // namespace etch::parser
 
 namespace etch {
-	const parser::expr_type & expr();
+	const parser::module_type & module();
 } // namespace etch
 
 #endif

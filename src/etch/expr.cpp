@@ -1,6 +1,6 @@
-#include <etch/expr_def.hpp>
+#include <etch/parser/module_def.hpp>
 #include <etch/config.hpp>
 
 namespace etch::parser {
-	BOOST_SPIRIT_INSTANTIATE(expr_type, iterator_type, context_type)
+	BOOST_SPIRIT_INSTANTIATE(module_type, iterator_type, context_type)
 } // namespace etch::parser

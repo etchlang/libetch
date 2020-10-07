@@ -50,6 +50,21 @@ namespace etch::ast {
 		using base_type::operator=;
 	};
 
+	struct definition {
+		identifier name;
+		expr value;
+	};
+
+	struct statement : x3::variant<
+		definition,
+		expr
+	> {
+		using base_type::base_type;
+		using base_type::operator=;
+	};
+
+	struct module : std::vector<statement> {};
+
 	struct op {
 		std::string opname;
 		atom lhs;
@@ -97,6 +112,23 @@ namespace etch::ast {
 
 	inline std::ostream & dump(std::ostream &s, const integer &x) {
 		return s << "(integer " << x.value << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const definition &x) {
+		s << "(definition ";
+		dump(s, x.name);
+		s << ' ';
+		dump(s, x.value);
+		return s << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const module &x) {
+		s << "(module";
+		for(auto &e : x) {
+			s << ' ';
+			dump(s, e);
+		}
+		return s << ')';
 	}
 } // namespace etch::ast
 

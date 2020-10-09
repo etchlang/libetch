@@ -48,7 +48,8 @@ namespace etch::ast {
 
 	struct expr : x3::variant<
 		compound,
-		x3::forward_ast<struct function>
+		x3::forward_ast<struct function>,
+		x3::forward_ast<struct call>
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
@@ -70,6 +71,11 @@ namespace etch::ast {
 	struct function {
 		arglist args;
 		expr value;
+	};
+
+	struct call {
+		atom callable;
+		expr arg;
 	};
 
 	struct definition {
@@ -162,6 +168,13 @@ namespace etch::ast {
 			dump(s, e, depth + 1) << std::endl;
 		}
 		dump(s, x.value, depth + 1) << std::endl;
+		return dump_depth(s, depth) << ')';
+	}
+
+	inline std::ostream & dump(std::ostream &s, const call &x, size_t depth = 0) {
+		dump_depth(s, depth) << "(call" << std::endl;
+		dump(s, x.callable, depth + 1) << std::endl;
+		dump(s, x.arg, depth + 1) << std::endl;
 		return dump_depth(s, depth) << ')';
 	}
 

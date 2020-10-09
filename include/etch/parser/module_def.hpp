@@ -19,6 +19,7 @@ namespace etch::parser {
 	const x3::rule<struct primary_class,    ast::primary>    primary;
 	const x3::rule<struct definition_class, ast::definition> definition;
 	const x3::rule<struct function_class,   ast::function>   function;
+	const x3::rule<struct call_class,       ast::call>       call;
 	const x3::rule<struct arglist_class,    ast::arglist>    arglist;
 	const x3::rule<struct op_class,         ast::op>         op;
 	const x3::rule<struct block_class,      ast::block>      block;
@@ -29,9 +30,7 @@ namespace etch::parser {
 	// grammar
 
 	const auto char_space  = x3::char_(" \r\n\t\v\f");
-	const auto char_opname = x3::char_('+') | x3::char_('-') | x3::char_('*')
-	                       | x3::char_('/') | x3::char_('>') | x3::char_('<')
-	                       | x3::char_('=');
+	const auto char_opname = x3::char_("+*/><=.") | x3::char_('-');
 
 	const auto char_ident_first = x3::char_("A-Za-z_");
 	const auto char_ident_rest  = x3::char_("A-Za-z_0-9");
@@ -44,12 +43,13 @@ namespace etch::parser {
 
 	const auto module_def     = *statement;
 	const auto statement_def  = definition | expr;
-	const auto expr_def       = function | compound;
+	const auto expr_def       = function | call | compound;
 	const auto compound_def   = op | atom;
 	const auto atom_def       = primary >> ':' >> atom | primary;
 	const auto primary_def    = block | tuple | identifier | integer;
 	const auto definition_def = identifier >> '=' >> expr;
 	const auto function_def   = arglist >> "->" >> expr;
+	const auto call_def       = atom >> "<-" >> expr;
 	const auto arglist_def    = ws >> '(' >> ws >> -(arg % ',') >> ws >> ')' >> ws
 	                          | x3::repeat(1)[arg];
 	const auto op_def         = atom >> opname >> compound;
@@ -60,7 +60,7 @@ namespace etch::parser {
 
 	BOOST_SPIRIT_DEFINE(
 		module, statement, expr, compound, atom, primary, definition, function,
-		arglist, op, block, tuple, identifier, integer
+		call, arglist, op, block, tuple, identifier, integer
 	)
 } // namespace etch::parser
 

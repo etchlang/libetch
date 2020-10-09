@@ -1,10 +1,10 @@
 #include <etch/parser.hpp>
 
 namespace etch {
-	ast::module parse(std::string_view sv) {
+	syntax::module parse(std::string_view sv) {
 		namespace x3 = boost::spirit::x3;
 
-		ast::module m;
+		syntax::module m;
 
 		auto it = sv.begin();
 		auto end = sv.end();

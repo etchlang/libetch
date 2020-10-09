@@ -2,8 +2,8 @@
 #define ETCH_EXPR_DEF_HPP 1
 
 #include <boost/spirit/home/x3.hpp>
-#include <etch/ast.hpp>
-#include <etch/ast_adapted.hpp>
+#include <etch/syntax/types.hpp>
+#include <etch/syntax/adapted.hpp>
 #include <etch/parser/module.hpp>
 
 namespace etch::parser {
@@ -12,20 +12,20 @@ namespace etch::parser {
 	// rules
 
 	const module_type module;
-	const x3::rule<struct statement_class,  ast::statement>  statement;
-	const x3::rule<struct expr_class,       ast::expr>       expr;
-	const x3::rule<struct compound_class,   ast::compound>   compound;
-	const x3::rule<struct atom_class,       ast::atom>       atom;
-	const x3::rule<struct primary_class,    ast::primary>    primary;
-	const x3::rule<struct definition_class, ast::definition> definition;
-	const x3::rule<struct function_class,   ast::function>   function;
-	const x3::rule<struct call_class,       ast::call>       call;
-	const x3::rule<struct arglist_class,    ast::arglist>    arglist;
-	const x3::rule<struct op_class,         ast::op>         op;
-	const x3::rule<struct block_class,      ast::block>      block;
-	const x3::rule<struct tuple_class,      ast::tuple>      tuple;
-	const x3::rule<struct identifier_class, ast::identifier> identifier;
-	const x3::rule<struct integer_class,    ast::integer>    integer;
+	const x3::rule<struct statement_class,  syntax::statement>  statement;
+	const x3::rule<struct expr_class,       syntax::expr>       expr;
+	const x3::rule<struct compound_class,   syntax::compound>   compound;
+	const x3::rule<struct atom_class,       syntax::atom>       atom;
+	const x3::rule<struct primary_class,    syntax::primary>    primary;
+	const x3::rule<struct definition_class, syntax::definition> definition;
+	const x3::rule<struct function_class,   syntax::function>   function;
+	const x3::rule<struct call_class,       syntax::call>       call;
+	const x3::rule<struct arglist_class,    syntax::arglist>    arglist;
+	const x3::rule<struct op_class,         syntax::op>         op;
+	const x3::rule<struct block_class,      syntax::block>      block;
+	const x3::rule<struct tuple_class,      syntax::tuple>      tuple;
+	const x3::rule<struct identifier_class, syntax::identifier> identifier;
+	const x3::rule<struct integer_class,    syntax::integer>    integer;
 
 	// grammar
 

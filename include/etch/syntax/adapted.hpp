@@ -1,36 +1,36 @@
-#ifndef ETCH_AST_ADAPTED_HPP
-#define ETCH_AST_ADAPTED_HPP 1
+#ifndef ETCH_SYNTAX_ADAPTED_HPP
+#define ETCH_SYNTAX_ADAPTED_HPP 1
 
 #include <boost/fusion/include/adapt_struct.hpp>
-#include <etch/ast.hpp>
+#include <etch/syntax/types.hpp>
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::integer,
+	etch::syntax::integer,
 	value
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::definition,
+	etch::syntax::definition,
 	name, value
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::function,
+	etch::syntax::function,
 	args, value
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::call,
+	etch::syntax::call,
 	callable, arg
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::op,
+	etch::syntax::op,
 	lhs, opname, rhs
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::ast::typed<etch::ast::primary>,
+	etch::syntax::typed<etch::syntax::primary>,
 	value, type
 )
 

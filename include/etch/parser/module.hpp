@@ -2,13 +2,13 @@
 #define ETCH_EXPR_HPP 1
 
 #include <boost/spirit/home/x3.hpp>
-#include <etch/ast.hpp>
+#include <etch/syntax/types.hpp>
 
 namespace etch::parser {
 	namespace x3 = boost::spirit::x3;
 
 	struct module_class;
-	using module_type = x3::rule<module_class, ast::module>;
+	using module_type = x3::rule<module_class, syntax::module>;
 	BOOST_SPIRIT_DECLARE(module_type)
 } // namespace etch::parser
 

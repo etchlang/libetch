@@ -20,11 +20,6 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-	etch::syntax::call,
-	callable, arg
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
 	etch::syntax::op,
 	lhs, opname, rhs
 )

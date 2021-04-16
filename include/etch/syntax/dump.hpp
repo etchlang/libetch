@@ -79,13 +79,6 @@ namespace etch::syntax {
 		return dump_depth(s, depth) << ')';
 	}
 
-	inline std::ostream & dump(std::ostream &s, const call &x, size_t depth = 0) {
-		dump_depth(s, depth) << "(call" << std::endl;
-		dump(s, x.callable, depth + 1) << std::endl;
-		dump(s, x.arg, depth + 1) << std::endl;
-		return dump_depth(s, depth) << ')';
-	}
-
 	inline std::ostream & dump(std::ostream &s, const module &x, size_t depth = 0) {
 		dump_depth(s, depth) << "(module" << std::endl;
 		for(auto &e : x) {

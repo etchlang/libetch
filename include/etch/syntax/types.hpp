@@ -49,8 +49,7 @@ namespace etch::syntax {
 
 	struct expr : x3::variant<
 		compound,
-		x3::forward_ast<struct function>,
-		x3::forward_ast<struct call>
+		x3::forward_ast<struct function>
 	> {
 		using base_type::base_type;
 		using base_type::operator=;
@@ -74,11 +73,6 @@ namespace etch::syntax {
 		expr value;
 	};
 
-	struct call {
-		atom callable;
-		expr arg;
-	};
-
 	struct definition {
 		identifier name;
 		expr value;
@@ -87,7 +81,7 @@ namespace etch::syntax {
 	struct op {
 		std::string opname;
 		atom lhs;
-		compound rhs;
+		expr rhs;
 	};
 
 	template<typename T>

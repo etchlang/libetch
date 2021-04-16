@@ -15,6 +15,13 @@ namespace etch::analysis {
 			ptr ty;
 
 			base(ptr ty) : ty(ty) {}
+			base(nullptr_t) {}
+			template<typename T> base(T ty) { setTy(ty); }
+
+			template<typename T>
+			ptr setTy(T newTy) {
+				return ty = std::static_pointer_cast<base>(std::make_shared<T>(newTy));
+			}
 
 			static std::ostream & dump_depth(std::ostream &s, size_t depth) {
 				for(size_t i = 0; i < depth; ++i) { s << "| "; }
@@ -23,7 +30,13 @@ namespace etch::analysis {
 
 			std::ostream & dump(std::ostream &s, size_t depth = 0) const {
 				dump_depth(s, depth);
-				dump_impl(s, depth);
+
+				if(depth > 5) {
+					s << "...";
+				} else {
+					dump_impl(s, depth);
+				}
+
 				if(ty) {
 					s << " :: ";
 					ty->dump_impl(s, depth);
@@ -34,8 +47,7 @@ namespace etch::analysis {
 			virtual std::ostream & dump_impl(std::ostream &s, size_t depth) const = 0;
 		};
 
-		class type_type : public base {
-		  public:
+		struct type_type : base {
 			type_type() : base(nullptr) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -43,8 +55,15 @@ namespace etch::analysis {
 			}
 		};
 
-		class type_int : public base {
-		  public:
+		struct type_any : base {
+			type_any() : base(type_type{}) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(type_any)";
+			}
+		};
+
+		struct type_int : base {
 			size_t size;
 
 			type_int(size_t size) : base(type_type{}), size(size) {}
@@ -54,37 +73,58 @@ namespace etch::analysis {
 			}
 		};
 
-		class constant_integer : public base {
-		  public:
+		struct type_function : base {
+			ptr lhs;
+			ptr rhs;
+
+			type_function(ptr lhs, ptr rhs) : base(type_type{}), lhs(lhs), rhs(rhs) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(type_function ";
+
+				if(lhs) {
+					lhs->dump_impl(s, depth) << ' ';
+				} else {
+					s << "???";
+				}
+
+				if(rhs) {
+					rhs->dump_impl(s, depth);
+				} else {
+					s << "???";
+				}
+
+				return s << ')';
+			}
+		};
+
+		struct constant_integer : base {
 			int32_t val;
 
-			constant_integer(int32_t val) : base(std::make_shared<type_int>(32)), val(val) {}
+			constant_integer(int32_t val) : base(type_int{32}), val(val) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(constant_integer " << val << ')';
 			}
 		};
 
-		class identifier : public base {
-		  public:
+		struct identifier : base {
 			using string_type = std::string;
-		  private:
-			string_type _str;
-		  public:
-			identifier(string_type str = "") : base(nullptr), _str(str) {}
+
+			string_type str;
+
+			identifier(string_type str = "") : base(nullptr), str(str) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(identifier " << str() << ')';
+				return s << "(identifier " << str << ')';
 			}
-
-			string_type str() const { return _str; }
 		};
 
-		class op : public base {
+		struct op : base {
 			std::shared_ptr<identifier> name;
 			ptr lhs;
 			ptr rhs;
-		  public:
+
 			op(identifier::string_type name, ptr lhs, ptr rhs) : base(lhs->ty), name(std::make_shared<identifier>(name)), lhs(lhs), rhs(rhs) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -96,10 +136,10 @@ namespace etch::analysis {
 			}
 		};
 
-		class definition : public base {
+		struct definition : base {
 			std::shared_ptr<identifier> name;
 			ptr val;
-		  public:
+
 			definition(identifier::string_type name, ptr val) : base(val->ty), name(std::make_shared<identifier>(name)), val(val) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -110,9 +150,9 @@ namespace etch::analysis {
 			}
 		};
 
-		class tuple : public base {
+		struct tuple : base {
 			std::vector<ptr> vals;
-		  public:
+
 			tuple() : base(type_int(32)) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -128,9 +168,9 @@ namespace etch::analysis {
 			}
 		};
 
-		class block : public base {
+		struct block : base {
 			std::vector<ptr> vals;
-		  public:
+
 			block() : base(type_int(32)) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -147,11 +187,11 @@ namespace etch::analysis {
 			}
 		};
 
-		class function : public base {
+		struct function : base {
 			std::vector<ptr> args;
 			ptr body;
-		  public:
-			function(ptr body) : base(type_int(32)), body(body) {}
+
+			function(ptr body) : base(type_function(std::make_shared<type_any>(), body->ty)), body(body) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(function" << std::endl;

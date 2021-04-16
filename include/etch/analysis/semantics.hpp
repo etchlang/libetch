@@ -55,7 +55,11 @@ namespace etch::analysis {
 		auto body = analysis(sf.value);
 		auto f = std::make_shared<value::function>(body);
 		for(auto &x : sf.args) {
-			f->push_arg(analysis(x));
+			auto arg = analysis(x);
+			if(!arg->ty) {
+				arg->setTy(value::type_any{});
+			}
+			f->push_arg(arg);
 		}
 		return std::static_pointer_cast<value::base>(f);
 	}

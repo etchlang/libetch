@@ -6,7 +6,7 @@
 #include <string_view>
 
 namespace etch {
-	analysis::module compile(std::string_view sv) {
+	analysis::module_ compile(std::string_view sv) {
 		auto sm = parse(sv);
 		return analysis::semantics{}.run(sm);
 	}

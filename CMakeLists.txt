@@ -36,8 +36,8 @@ add_definitions(
 )
 
 set(ETCH_SRCS
-	src/etch/expr.cpp
 	src/etch/parser.cpp
+	src/etch/parser/expr.cpp
 )
 
 if(WIN32)

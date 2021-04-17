@@ -6,7 +6,7 @@
 #include <stddef.h>
 
 namespace etch::analysis {
-	inline std::ostream & dump(std::ostream &s, const module &m, size_t depth = 0) {
+	inline std::ostream & dump(std::ostream &s, const module_ &m, size_t depth = 0) {
 		value::base::dump_depth(s, depth) << "(module" << std::endl;
 		for(auto &def : m.defs) {
 			def->dump(s, depth + 1) << std::endl;

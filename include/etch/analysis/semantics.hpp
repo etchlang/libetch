@@ -91,8 +91,8 @@ namespace etch::analysis {
 			}
 		};
 
-		module run(const syntax::module &sm) {
-			module m;
+		module_ run(const syntax::module &sm) {
+			module_ m;
 			for(auto &st : sm) {
 				if(auto r = boost::apply_visitor(def_analysis{}, st)) {
 					m.defs.push_back(run(*r));

@@ -208,7 +208,7 @@ namespace etch::analysis {
 		};
 	} // namspace value
 
-	struct module {
+	struct module_ {
 		std::vector<value::ptr> defs;
 	};
 } // namespace etch::analysis

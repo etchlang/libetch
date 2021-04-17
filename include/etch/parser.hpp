@@ -8,7 +8,7 @@
 #include <string_view>
 
 namespace etch {
-	analysis::module parse(std::string_view sv);
+	syntax::module parse(std::string_view sv);
 } // namespace etch
 
 #endif

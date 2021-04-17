@@ -1,7 +1,6 @@
 #ifndef ETCH_ANALYSIS_SEMANTICS_HPP
 #define ETCH_ANALYSIS_SEMANTICS_HPP 1
 
-#include <etch/analysis/dump.hpp>
 #include <etch/analysis/types.hpp>
 #include <etch/syntax/types.hpp>
 #include <optional>

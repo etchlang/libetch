@@ -210,6 +210,14 @@ namespace etch::analysis {
 
 	struct module_ {
 		std::vector<value::ptr> defs;
+
+		std::ostream & dump(std::ostream &s, size_t depth = 0) const {
+			value::base::dump_depth(s, depth) << "(module" << std::endl;
+			for(auto &def : defs) {
+				def->dump(s, depth + 1) << std::endl;
+			}
+			return value::base::dump_depth(s, depth) << ')';
+		}
 	};
 } // namespace etch::analysis
 

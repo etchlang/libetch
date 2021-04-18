@@ -28,8 +28,6 @@ namespace etch {
 
 	void codegen::run(std::shared_ptr<analysis::value::definition> def) {
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
-			auto ty = type(def->ty);
-
 			auto c = constant(i);
 			auto gv = new llvm::GlobalVariable(m, c->getType(), true, llvm::Function::ExternalLinkage, c, def->name.str);
 		}

@@ -73,6 +73,24 @@ namespace etch::analysis {
 			}
 		};
 
+		struct type_tuple : base {
+			std::vector<ptr> tys;
+
+			type_tuple() : base(type_type{}) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(type_tuple" << std::endl;
+				for(auto &ty : tys) {
+					if(ty) {
+						ty->dump(s, depth + 4) << std::endl;
+					} else {
+						dump_depth(s, depth + 4) << "???" << std::endl;
+					}
+				}
+				return dump_depth(s, depth) << ')';
+			}
+		};
+
 		struct type_function : base {
 			ptr lhs;
 			ptr rhs;
@@ -153,7 +171,7 @@ namespace etch::analysis {
 		struct tuple : base {
 			std::vector<ptr> vals;
 
-			tuple() : base(type_int(32)) {}
+			tuple() : base(type_tuple{}) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(tuple" << std::endl;
@@ -165,6 +183,8 @@ namespace etch::analysis {
 
 			void push_back(ptr x) {
 				vals.push_back(x);
+				auto ty_tuple = std::dynamic_pointer_cast<type_tuple>(ty);
+				ty_tuple->tys.push_back(x->ty);
 			}
 		};
 

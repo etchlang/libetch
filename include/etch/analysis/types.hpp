@@ -137,7 +137,7 @@ namespace etch::analysis {
 
 			string_type str;
 
-			identifier(string_type str = "") : base(nullptr), str(str) {}
+			identifier(string_type str = "") : base(type_int{32} /* XXX */), str(str) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(identifier " << str << ')';

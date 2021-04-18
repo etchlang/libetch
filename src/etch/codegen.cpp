@@ -8,13 +8,19 @@ namespace etch {
 
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
 			r = llvm::Type::getIntNTy(ctx, ty_int->width);
-		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(ty)) {
-			auto lty_ret = type(ty_fn->body);
-			r = llvm::FunctionType::get(lty_ret, false);
 		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(ty)) {
 			if(ty_tuple->tys.empty()) {
 				r = llvm::Type::getVoidTy(ctx);
 			}
+		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(ty)) {
+			std::vector<llvm::Type *> lty_args;
+			for(auto &arg : ty_fn->args) {
+				lty_args.push_back(type(arg));
+			}
+
+			auto lty_ret = type(ty_fn->body);
+
+			r = llvm::FunctionType::get(lty_ret, lty_args, false);
 		}
 
 		return r;
@@ -47,7 +53,13 @@ namespace etch {
 			auto gv = new llvm::GlobalVariable(m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
 			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
+
 			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, def->name.str, m);
+
+			for(size_t i = 0; i < fn->args.size(); ++i) {
+				auto name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);
+				f->getArg(i)->setName(name->str);
+			}
 
 			auto bb = llvm::BasicBlock::Create(ctx, "entry", f);
 

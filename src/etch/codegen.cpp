@@ -1,25 +1,45 @@
 #include <etch/codegen.hpp>
-#include <etch/analysis/semantics.hpp>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 
 namespace etch {
-	std::string codegen::run(const analysis::module_ &am) {
-		llvm::LLVMContext ctx;
-		llvm::Module m("module.e", ctx);
+	llvm::Type * codegen::type(analysis::value::ptr ty) {
+		llvm::Type *r = nullptr;
 
+		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
+			r = llvm::Type::getIntNTy(ctx, ty_int->width);
+		}
+
+		return r;
+	}
+
+	llvm::Constant * codegen::constant(std::shared_ptr<analysis::value::constant_integer> val) {
+		llvm::Constant *r = nullptr;
+
+		auto lty = type(val->ty);
+		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(val->ty)) {
+			llvm::APInt ap(ty_int->width, val->val);
+			r = llvm::Constant::getIntegerValue(lty, ap);
+		}
+
+		return r;
+	}
+
+	void codegen::run(std::shared_ptr<analysis::value::definition> def) {
+		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
+			auto ty = type(def->ty);
+
+			auto c = constant(i);
+			auto gv = new llvm::GlobalVariable(m, c->getType(), true, llvm::Function::ExternalLinkage, nullptr, def->name.str);
+			gv->setInitializer(c);
+		}
+	}
+
+	std::string codegen::run(const analysis::module_ &am) {
 		for(auto &val : am.defs) {
 			if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
-				if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
-					auto ty_i32 = llvm::Type::getIntNTy(ctx, 32);
-
-					auto gv = new llvm::GlobalVariable(m, ty_i32, true, llvm::Function::ExternalLinkage, nullptr, def->name.str);
-
-					llvm::APInt ap(32, i->val);
-					auto constant = llvm::Constant::getIntegerValue(ty_i32, ap);
-					gv->setInitializer(constant);
-				}
+				run(def);
 			}
 		}
 

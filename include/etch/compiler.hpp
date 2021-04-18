@@ -4,7 +4,7 @@
 #include <string_view>
 
 namespace etch {
-	std::string compile(std::string_view sv);
+	std::string compile(std::string_view);
 } // namespace etch
 
 #endif

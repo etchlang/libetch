@@ -1,8 +1,6 @@
 #include <etch/parser.hpp>
 #include <etch/analysis/semantics.hpp>
-
 #include <iostream>
-#include <etch/syntax/dump.hpp>
 
 namespace etch {
 	syntax::module parse(std::string_view sv) {

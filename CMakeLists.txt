@@ -36,6 +36,7 @@ add_definitions(
 )
 
 set(ETCH_SRCS
+	src/etch/codegen.cpp
 	src/etch/parser.cpp
 	src/etch/parser/expr.cpp
 )
@@ -54,6 +55,8 @@ if(UNIX)
 		${PTHREAD_LIB}
 	)
 endif()
+
+# Boost
 
 set(Boost_USE_STATIC_LIBS    ON)
 set(Boost_USE_MULTITHREADED  ON)
@@ -78,12 +81,29 @@ set(ETCH_LIBS ${ETCH_LIBS}
 	${Boost_LIBRARIES}
 )
 
+# LLVM
+
+find_package(LLVM REQUIRED CONFIG)
+
+set(ETCH_DEFINITIONS
+	${LLVM_DEFINITIONS}
+)
+
+set(ETCH_INCLUDE_DIRS ${ETCH_INCLUDE_DIRS}
+	${LLVM_INCLUDE_DIRS}
+)
+
+# macOS kludge
+
 set(ETCH_FRAMEWORKS ${ETCH_LIBS})
 list(FILTER ETCH_FRAMEWORKS INCLUDE REGEX "\.framework$")
 list(FILTER ETCH_FRAMEWORKS EXCLUDE REGEX "^/System/")
 
 # libetch
+
 add_library(etch STATIC ${ETCH_SRCS})
+llvm_config(etch)
+target_compile_definitions(etch PRIVATE ${ETCH_DEFINITIONS})
 target_include_directories(etch PRIVATE ${ETCH_INCLUDE_DIRS})
 target_link_directories(etch PRIVATE ${ETCH_LIBRARY_DIRS})
 target_link_libraries(etch ${ETCH_LIBS})
@@ -100,8 +120,17 @@ if(ENABLE_CLANG_TIDY)
 	endif()
 endif()
 
+set(ETCH_LIBRARY_DIRS ${ETCH_LIBRARY_DIRS}
+	${LLVM_LIBRARY_DIRS}
+)
+
+set(ETCH_LIBS ${ETCH_LIBS}
+	${LLVM_AVAILABLE_LIBS}
+)
+
 get_directory_property(HAS_PARENT PARENT_DIRECTORY)
 if(HAS_PARENT)
+	set(ETCH_DEFINITIONS  ${ETCH_DEFINITIONS}  PARENT_SCOPE)
 	set(ETCH_INCLUDE_DIRS ${ETCH_INCLUDE_DIRS} PARENT_SCOPE)
 	set(ETCH_LIBRARY_DIRS ${ETCH_LIBRARY_DIRS} PARENT_SCOPE)
 	set(ETCH_LIBS         ${ETCH_LIBS}         PARENT_SCOPE)

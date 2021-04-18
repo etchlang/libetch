@@ -4,7 +4,10 @@
 #include <etch/analysis/types.hpp>
 
 namespace etch {
-	std::string codegen(const analysis::module_ &am);
+	class codegen {
+	  public:
+		std::string run(const analysis::module_ &am);
+	};
 } // namespace etch
 
 #endif

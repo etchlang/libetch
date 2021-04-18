@@ -37,6 +37,7 @@ add_definitions(
 
 set(ETCH_SRCS
 	src/etch/codegen.cpp
+	src/etch/compiler.cpp
 	src/etch/parser.cpp
 	src/etch/parser/expr.cpp
 )

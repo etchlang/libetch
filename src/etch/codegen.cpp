@@ -5,7 +5,7 @@
 #include <llvm/IR/Verifier.h>
 
 namespace etch {
-	std::string codegen(const analysis::module_ &am) {
+	std::string codegen::run(const analysis::module_ &am) {
 		llvm::LLVMContext ctx;
 		llvm::Module m("module.e", ctx);
 

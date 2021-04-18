@@ -92,18 +92,24 @@ namespace etch::analysis {
 		};
 
 		struct type_function : base {
-			ptr lhs;
+			std::vector<ptr> args;
 			ptr body;
 
-			type_function(ptr lhs, ptr body) : base(type_type{}), lhs(lhs), body(body) {}
+			type_function(ptr body) : base(type_type{}), body(body) {}
+
+			void push_arg(ptr ty) {
+				args.push_back(ty);
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(type_function ";
 
-				if(lhs) {
-					lhs->dump_impl(s, depth) << ' ';
-				} else {
-					s << "???";
+				for(auto &ty : args) {
+					if(ty) {
+						ty->dump_impl(s, depth) << ' ';
+					} else {
+						s << "???";
+					}
 				}
 
 				if(body) {
@@ -211,7 +217,7 @@ namespace etch::analysis {
 			std::vector<ptr> args;
 			ptr body;
 
-			function(ptr body) : base(type_function(std::make_shared<type_any>(), body->ty)), body(body) {}
+			function(ptr body) : base(type_function(body->ty)), body(body) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(function" << std::endl;
@@ -224,6 +230,8 @@ namespace etch::analysis {
 
 			void push_arg(ptr x) {
 				args.push_back(x);
+				auto ty_fn = std::dynamic_pointer_cast<type_function>(ty);
+				ty_fn->push_arg(x->ty);
 			}
 		};
 	} // namspace value

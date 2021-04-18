@@ -93,9 +93,9 @@ namespace etch::analysis {
 
 		struct type_function : base {
 			ptr lhs;
-			ptr rhs;
+			ptr body;
 
-			type_function(ptr lhs, ptr rhs) : base(type_type{}), lhs(lhs), rhs(rhs) {}
+			type_function(ptr lhs, ptr body) : base(type_type{}), lhs(lhs), body(body) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(type_function ";
@@ -106,8 +106,8 @@ namespace etch::analysis {
 					s << "???";
 				}
 
-				if(rhs) {
-					rhs->dump_impl(s, depth);
+				if(body) {
+					body->dump_impl(s, depth);
 				} else {
 					s << "???";
 				}
@@ -191,7 +191,7 @@ namespace etch::analysis {
 		struct block : base {
 			std::vector<ptr> vals;
 
-			block() : base(type_int(32)) {}
+			block() : base(type_tuple{}) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(block" << std::endl;

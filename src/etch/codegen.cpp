@@ -31,8 +31,7 @@ namespace etch {
 			auto ty = type(def->ty);
 
 			auto c = constant(i);
-			auto gv = new llvm::GlobalVariable(m, c->getType(), true, llvm::Function::ExternalLinkage, nullptr, def->name.str);
-			gv->setInitializer(c);
+			auto gv = new llvm::GlobalVariable(m, c->getType(), true, llvm::Function::ExternalLinkage, c, def->name.str);
 		}
 	}
 

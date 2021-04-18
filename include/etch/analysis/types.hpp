@@ -28,7 +28,7 @@ namespace etch::analysis {
 				return s;
 			}
 
-			std::ostream & dump(std::ostream &s, size_t depth = 0) const {
+			std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
 				dump_depth(s, depth);
 
 				if(depth > 5) {
@@ -231,7 +231,7 @@ namespace etch::analysis {
 	struct module_ {
 		std::vector<value::ptr> defs;
 
-		std::ostream & dump(std::ostream &s, size_t depth = 0) const {
+		std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
 			value::base::dump_depth(s, depth) << "(module" << std::endl;
 			for(auto &def : defs) {
 				def->dump(s, depth + 1) << std::endl;

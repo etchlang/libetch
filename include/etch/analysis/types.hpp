@@ -137,14 +137,14 @@ namespace etch::analysis {
 		};
 
 		struct definition : base {
-			std::shared_ptr<identifier> name;
+			identifier name;
 			ptr val;
 
-			definition(identifier::string_type name, ptr val) : base(val->ty), name(std::make_shared<identifier>(name)), val(val) {}
+			definition(identifier::string_type name, ptr val) : base(val->ty), name(name), val(val) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(definition" << std::endl;
-				name->dump(s, depth + 1) << std::endl;
+				name.dump(s, depth + 1) << std::endl;
 				val->dump(s, depth + 1) << std::endl;
 				return dump_depth(s, depth) << ')';
 			}

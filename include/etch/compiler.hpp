@@ -7,11 +7,11 @@
 #include <string_view>
 
 namespace etch {
-	analysis::module_ compile(std::string_view sv) {
+	std::string compile(std::string_view sv) {
 		auto sm = parse(sv);
 		auto m = analysis::semantics{}.run(sm);
-		codegen(m);
-		return m;
+		auto ll = codegen(m);
+		return ll;
 	}
 } // namespace etch
 

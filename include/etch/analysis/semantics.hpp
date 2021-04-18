@@ -78,24 +78,10 @@ namespace etch::analysis {
 			return std::static_pointer_cast<value::base>(std::make_shared<value::op>(name, lhs, rhs));
 		}
 
-		struct def_analysis {
-			using result_type = std::optional<syntax::definition>;
-
-			result_type operator()(const syntax::expr &) const {
-				return {};
-			}
-
-			result_type operator()(const syntax::x3::forward_ast<syntax::definition> &ptr) const {
-				return ptr.get();
-			}
-		};
-
 		module_ run(const syntax::module &sm) {
 			module_ m;
 			for(auto &st : sm) {
-				if(auto r = boost::apply_visitor(def_analysis{}, st)) {
-					m.defs.push_back(run(*r));
-				}
+				m.defs.push_back(run(st));
 			}
 			return m;
 		}

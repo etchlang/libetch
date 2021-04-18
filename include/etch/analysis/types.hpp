@@ -64,12 +64,12 @@ namespace etch::analysis {
 		};
 
 		struct type_int : base {
-			size_t size;
+			size_t width;
 
-			type_int(size_t size) : base(type_type{}), size(size) {}
+			type_int(size_t width) : base(type_type{}), width(width) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(type_int " << size << ')';
+				return s << "(type_int " << width << ')';
 			}
 		};
 

@@ -5,9 +5,21 @@ namespace etch::transform {
 	class fold {
 	  public:
 		analysis::value::ptr run(analysis::value::ptr val) {
+			if(val == nullptr) { return val; }
+
 			auto r = val;
 
-			if(auto op = std::dynamic_pointer_cast<analysis::value::op>(val)) {
+			if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(val)) {
+				for(auto &ty : ty_tuple->tys) {
+					ty = run(ty);
+				}
+
+				if(ty_tuple->tys.size() == 1) {
+					r = ty_tuple->tys[0];
+				}
+			} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
+				ty_fn->body = run(ty_fn->body);
+			} else if(auto op = std::dynamic_pointer_cast<analysis::value::op>(val)) {
 				op->lhs = run(op->lhs);
 				op->rhs = run(op->rhs);
 
@@ -40,7 +52,7 @@ namespace etch::transform {
 				fn->body = run(fn->body);
 			}
 
-			//val->dump(std::cout) << std::endl;
+			val->ty = run(val->ty);
 
 			return r;
 		}

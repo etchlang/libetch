@@ -2,6 +2,7 @@
 #define ETCH_CODEGEN_HPP 1
 
 #include <etch/analysis/types.hpp>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 
 namespace etch {
@@ -15,6 +16,7 @@ namespace etch {
 
 		llvm::Constant * constant(std::shared_ptr<analysis::value::constant_integer>);
 
+		llvm::Value * run(llvm::IRBuilder<> &, analysis::value::ptr);
 		void run(std::shared_ptr<analysis::value::definition>);
 		std::string run(const analysis::module_ &);
 	};

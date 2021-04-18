@@ -1,5 +1,4 @@
 #include <etch/codegen.hpp>
-#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 
@@ -33,6 +32,15 @@ namespace etch {
 		return r;
 	}
 
+	llvm::Value * codegen::run(llvm::IRBuilder<> &builder, analysis::value::ptr val) {
+		llvm::Value *r = nullptr;
+
+		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
+			r = constant(i);
+		}
+		return r;
+	}
+
 	void codegen::run(std::shared_ptr<analysis::value::definition> def) {
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
 			auto c = constant(i);
@@ -44,7 +52,11 @@ namespace etch {
 			auto bb = llvm::BasicBlock::Create(ctx, "entry", f);
 
 			llvm::IRBuilder<> builder(bb);
-			builder.CreateRetVoid();
+			if(auto r = run(builder, fn->body)) {
+				builder.CreateRet(r);
+			} else {
+				builder.CreateRetVoid();
+			}
 		}
 	}
 

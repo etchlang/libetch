@@ -1,16 +1,14 @@
 #include <etch/codegen.hpp>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Verifier.h>
 
 namespace etch {
 	llvm::Type * codegen::type(analysis::value::ptr ty) {
 		llvm::Type *r = nullptr;
 
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
-			r = llvm::Type::getIntNTy(ctx, (unsigned int)ty_int->width);
+			r = llvm::Type::getIntNTy(*ctx, (unsigned int)ty_int->width);
 		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(ty)) {
 			if(ty_tuple->tys.empty()) {
-				r = llvm::Type::getVoidTy(ctx);
+				r = llvm::Type::getVoidTy(*ctx);
 			}
 		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(ty)) {
 			std::vector<llvm::Type *> lty_args;
@@ -84,7 +82,7 @@ namespace etch {
 
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
 			auto c = constant(i);
-			r = new llvm::GlobalVariable(m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
+			r = new llvm::GlobalVariable(*m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
 		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->val)) {
 			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
 			r = llvm::GlobalAlias::create(def->name.str, gv);
@@ -92,7 +90,7 @@ namespace etch {
 			auto scp = std::make_shared<scope>(scope_module);
 
 			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
-			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, def->name.str, m);
+			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, def->name.str, *m);
 
 			for(size_t i = 0; i < fn->args.size(); ++i) {
 				auto name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);
@@ -103,7 +101,7 @@ namespace etch {
 				scp->push(name->str, arg);
 			}
 
-			auto bb = llvm::BasicBlock::Create(ctx, "entry", f);
+			auto bb = llvm::BasicBlock::Create(*ctx, "entry", f);
 
 			llvm::IRBuilder<> builder(bb);
 			if(auto ret = run(scp, builder, fn->body)) {
@@ -124,21 +122,11 @@ namespace etch {
 		return r;
 	}
 
-	std::string codegen::run(const analysis::module_ &am) {
+	void codegen::run(const analysis::module_ &am) {
 		for(auto &val : am.defs) {
 			if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 				run(def);
 			}
 		}
-
-		llvm::verifyModule(m, &llvm::errs());
-
-		// output LLVM assembly to string
-		std::string str;
-		llvm::raw_string_ostream os(str);
-		os << m;
-		os.flush();
-
-		return str;
 	}
 } // namespace etch

@@ -4,6 +4,7 @@
 #include <etch/analysis/types.hpp>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Verifier.h>
 
 namespace etch {
 	class codegen {
@@ -30,13 +31,13 @@ namespace etch {
 			}
 		};
 
-		llvm::LLVMContext ctx;
-		llvm::Module m;
+		std::shared_ptr<llvm::LLVMContext> ctx;
+		std::shared_ptr<llvm::Module> m;
 
 		std::unordered_map<std::string, std::shared_ptr<scope>> scopes;
 		std::shared_ptr<scope> scope_module = std::make_shared<scope>();
 	  public:
-		codegen(std::string name = "a.e") : m(name, ctx) {}
+		codegen(std::shared_ptr<llvm::LLVMContext> ctx, std::shared_ptr<llvm::Module> m) : ctx(ctx), m(m) {}
 
 		llvm::Type * type(analysis::value::ptr);
 
@@ -44,7 +45,7 @@ namespace etch {
 
 		llvm::Value * run(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr);
 		llvm::Constant * run(std::shared_ptr<analysis::value::definition>);
-		std::string run(const analysis::module_ &);
+		void run(const analysis::module_ &);
 	};
 } // namespace etch
 

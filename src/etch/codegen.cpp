@@ -7,7 +7,7 @@ namespace etch {
 		llvm::Type *r = nullptr;
 
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
-			r = llvm::Type::getIntNTy(ctx, ty_int->width);
+			r = llvm::Type::getIntNTy(ctx, (unsigned int)ty_int->width);
 		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(ty)) {
 			if(ty_tuple->tys.empty()) {
 				r = llvm::Type::getVoidTy(ctx);
@@ -31,19 +31,47 @@ namespace etch {
 
 		auto lty = type(val->ty);
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(val->ty)) {
-			llvm::APInt ap(ty_int->width, val->val);
+			llvm::APInt ap((unsigned int)ty_int->width, val->val);
 			r = llvm::Constant::getIntegerValue(lty, ap);
 		}
 
 		return r;
 	}
 
-	llvm::Value * codegen::run(llvm::IRBuilder<> &builder, analysis::value::ptr val) {
+	llvm::Value * codegen::run(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, analysis::value::ptr val) {
 		llvm::Value *r = nullptr;
 
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
 			r = constant(i);
-		} else {
+		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
+			auto sym = scp->find(id->str);
+			if(llvm::isa<llvm::GlobalVariable>(sym) || llvm::isa<llvm::GlobalAlias>(sym)) {
+				auto lty = sym->getType()->getPointerElementType();
+				r = builder.CreateLoad(lty, sym);
+			} else {
+				r = sym;
+			}
+		} else if(auto op = std::dynamic_pointer_cast<analysis::value::op>(val)) {
+			auto lhs = run(scp, builder, op->lhs);
+			auto rhs = run(scp, builder, op->rhs);
+
+			if(op->name->str == "+") {
+				r = builder.CreateAdd(lhs, rhs);
+			}
+		} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
+			auto val = run(scp, builder, def->val);
+			val->setName(def->name.str);
+
+			scp->push(def->name.str, val);
+
+			r = val;
+		} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
+			for(auto &val : block->vals) {
+				r = run(scp, builder, val);
+			}
+		}
+
+		if(!r) {
 			std::cout << "UNHANDLED VALUE: ";
 			val->dump() << std::endl;
 		}
@@ -58,34 +86,41 @@ namespace etch {
 			auto c = constant(i);
 			r = new llvm::GlobalVariable(m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
 		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->val)) {
-			auto gv = llvm::cast<llvm::GlobalValue>(symtab[id->str]);
+			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
 			r = llvm::GlobalAlias::create(def->name.str, gv);
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
-			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
+			auto scp = std::make_shared<scope>(scope_module);
 
+			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
 			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, def->name.str, m);
 
 			for(size_t i = 0; i < fn->args.size(); ++i) {
 				auto name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);
-				f->getArg(i)->setName(name->str);
+
+				auto arg = f->getArg((unsigned int)i);
+				arg->setName(name->str);
+
+				scp->push(name->str, arg);
 			}
 
 			auto bb = llvm::BasicBlock::Create(ctx, "entry", f);
 
 			llvm::IRBuilder<> builder(bb);
-			if(auto ret = run(builder, fn->body)) {
+			if(auto ret = run(scp, builder, fn->body)) {
 				builder.CreateRet(ret);
 			} else {
 				builder.CreateRetVoid();
 			}
 
 			r = f;
-		} else {
-			std::cout << "UNHANDLED GLOBAL DEF: ";
+		}
+
+		if(!r) {
+			std::cout << "UNHANDLED GLOBAL VALUE: ";
 			def->val->dump() << std::endl;
 		}
 
-		symtab[def->name.str] = r;
+		scope_module->push(def->name.str, r);
 		return r;
 	}
 

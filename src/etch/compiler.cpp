@@ -6,14 +6,14 @@
 #include <llvm/IR/Module.h>
 
 namespace etch {
-	std::string etch::compile(std::string_view sv) {
+	std::string etch::compile(std::string_view sv, std::string name) {
 		auto sm = parse(sv);
 		auto am = analysis::semantics{}.run(sm);
 
 		transform::fold{}.run(am);
 
 		std::shared_ptr<llvm::LLVMContext> ctx = std::make_shared<llvm::LLVMContext>();
-		std::shared_ptr<llvm::Module> m = std::make_shared<llvm::Module>("a.e", *ctx);
+		std::shared_ptr<llvm::Module> m = std::make_shared<llvm::Module>(name, *ctx);
 
 		codegen{ctx, m}.run(am);
 

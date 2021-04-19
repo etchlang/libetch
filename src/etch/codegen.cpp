@@ -43,14 +43,23 @@ namespace etch {
 
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
 			r = constant(i);
+		} else {
+			std::cout << "UNHANDLED VALUE: ";
+			val->dump() << std::endl;
 		}
+
 		return r;
 	}
 
-	void codegen::run(std::shared_ptr<analysis::value::definition> def) {
+	llvm::Constant * codegen::run(std::shared_ptr<analysis::value::definition> def) {
+		llvm::Constant *r = nullptr;
+
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
 			auto c = constant(i);
-			auto gv = new llvm::GlobalVariable(m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
+			r = new llvm::GlobalVariable(m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
+		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->val)) {
+			auto gv = llvm::cast<llvm::GlobalValue>(symtab[id->str]);
+			r = llvm::GlobalAlias::create(def->name.str, gv);
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
 			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
 
@@ -64,12 +73,20 @@ namespace etch {
 			auto bb = llvm::BasicBlock::Create(ctx, "entry", f);
 
 			llvm::IRBuilder<> builder(bb);
-			if(auto r = run(builder, fn->body)) {
-				builder.CreateRet(r);
+			if(auto ret = run(builder, fn->body)) {
+				builder.CreateRet(ret);
 			} else {
 				builder.CreateRetVoid();
 			}
+
+			r = f;
+		} else {
+			std::cout << "UNHANDLED GLOBAL DEF: ";
+			def->val->dump() << std::endl;
 		}
+
+		symtab[def->name.str] = r;
+		return r;
 	}
 
 	std::string codegen::run(const analysis::module_ &am) {

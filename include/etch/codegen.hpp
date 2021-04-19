@@ -9,6 +9,8 @@ namespace etch {
 	class codegen {
 		llvm::LLVMContext ctx;
 		llvm::Module m;
+
+		std::unordered_map<std::string, llvm::Constant *> symtab;
 	  public:
 		codegen(std::string name = "a.e") : m(name, ctx) {}
 
@@ -17,7 +19,7 @@ namespace etch {
 		llvm::Constant * constant(std::shared_ptr<analysis::value::constant_integer>);
 
 		llvm::Value * run(llvm::IRBuilder<> &, analysis::value::ptr);
-		void run(std::shared_ptr<analysis::value::definition>);
+		llvm::Constant * run(std::shared_ptr<analysis::value::definition>);
 		std::string run(const analysis::module_ &);
 	};
 } // namespace etch

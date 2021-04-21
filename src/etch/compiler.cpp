@@ -39,7 +39,7 @@ namespace etch {
 		auto triple = llvm::sys::getDefaultTargetTriple();
 		m->setTargetTriple(triple);
 
-		std::cout << "target triple = " << triple << std::endl;
+		//std::cout << "target triple = " << triple << std::endl;
 
 		std::string err;
 		auto target = llvm::TargetRegistry::lookupTarget(triple, err);

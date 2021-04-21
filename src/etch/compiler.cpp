@@ -4,7 +4,6 @@
 #include <etch/parser.hpp>
 #include <etch/transform/fold.hpp>
 #include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Module.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
@@ -12,14 +11,11 @@
 #include <llvm/Target/TargetMachine.h>
 
 namespace etch {
-	std::string etch::compile(std::string_view sv, std::string name) {
+	std::string compiler::run(std::string_view sv) {
 		auto sm = parse(sv);
 		auto am = analysis::semantics{}.run(sm);
 
 		transform::fold{}.run(am);
-
-		std::shared_ptr<llvm::LLVMContext> ctx = std::make_shared<llvm::LLVMContext>();
-		std::shared_ptr<llvm::Module> m = std::make_shared<llvm::Module>(name, *ctx);
 
 		codegen{ctx, m}.run(am);
 
@@ -55,17 +51,18 @@ namespace etch {
 
 		m->setDataLayout(target_machine->createDataLayout());
 
-		llvm::SmallString<256> assembly;
-		llvm::raw_svector_ostream s_asm(assembly);
+		llvm::SmallString<256> output;
+		llvm::raw_svector_ostream s_output(output);
 
 		llvm::legacy::PassManager pm;
-		auto ft = llvm::CGFT_AssemblyFile;
 
-		if(target_machine->addPassesToEmitFile(pm, s_asm, nullptr, ft)) {
+		auto ft = interpreter ? llvm::CGFT_AssemblyFile : llvm::CGFT_ObjectFile;
+
+		if(target_machine->addPassesToEmitFile(pm, s_output, nullptr, ft)) {
 			std::cerr << "ERROR: cannot emit file type" << std::endl;
 		}
 		pm.run(*m);
 
-		return std::string(assembly);
+		return std::string(output);
 	}
 } // namespace etch

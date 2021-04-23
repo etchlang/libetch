@@ -39,6 +39,7 @@ set(ETCH_SRCS
 	src/etch/codegen.cpp
 	src/etch/compiler.cpp
 	src/etch/linker.cpp
+	src/etch/mangling.cpp
 	src/etch/parser.cpp
 	src/etch/parser/expr.cpp
 )

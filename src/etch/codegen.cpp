@@ -1,4 +1,5 @@
 #include <etch/codegen.hpp>
+#include <etch/mangling.hpp>
 
 namespace etch {
 	llvm::Type * codegen::type(analysis::value::ptr ty) {
@@ -80,17 +81,19 @@ namespace etch {
 	llvm::Constant * codegen::run(std::shared_ptr<analysis::value::definition> def) {
 		llvm::Constant *r = nullptr;
 
+		auto mangled = mangle(def->name.str);
+
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
 			auto c = constant(i);
-			r = new llvm::GlobalVariable(*m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, def->name.str);
+			r = new llvm::GlobalVariable(*m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, mangled);
 		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->val)) {
 			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
-			r = llvm::GlobalAlias::create(def->name.str, gv);
+			r = llvm::GlobalAlias::create(mangled, gv);
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
 			auto scp = std::make_shared<scope>(scope_module);
 
 			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
-			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, def->name.str, *m);
+			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, mangled, *m);
 
 			for(size_t i = 0; i < fn->args.size(); ++i) {
 				auto name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);

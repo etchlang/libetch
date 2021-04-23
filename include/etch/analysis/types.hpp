@@ -79,15 +79,19 @@ namespace etch::analysis {
 			type_tuple() : base(type_type{}) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(type_tuple" << std::endl;
-				for(auto &ty : tys) {
-					if(ty) {
-						ty->dump(s, depth + 4) << std::endl;
-					} else {
-						dump_depth(s, depth + 4) << "???" << std::endl;
+				s << "(type_tuple";
+				if(!tys.empty()) {
+					s << std::endl;
+					for(auto &ty : tys) {
+						if(ty) {
+							ty->dump(s, depth + 4) << std::endl;
+						} else {
+							dump_depth(s, depth + 4) << "???" << std::endl;
+						}
 					}
+					dump_depth(s, depth);
 				}
-				return dump_depth(s, depth) << ')';
+				return s << ')';
 			}
 		};
 
@@ -187,18 +191,22 @@ namespace etch::analysis {
 
 			tuple() : base(type_tuple{}) {}
 
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(tuple" << std::endl;
-				for(auto &val : vals) {
-					val->dump(s, depth + 1) << std::endl;
-				}
-				return dump_depth(s, depth) << ')';
-			}
-
 			void push_back(ptr x) {
 				vals.push_back(x);
 				auto ty_tuple = std::dynamic_pointer_cast<type_tuple>(ty);
 				ty_tuple->tys.push_back(x->ty);
+			}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(tuple";
+				if(!vals.empty()) {
+					s << std::endl;
+					for(auto &val : vals) {
+						val->dump(s, depth + 1) << std::endl;
+					}
+					dump_depth(s, depth);
+				}
+				return s << ')';
 			}
 		};
 
@@ -207,17 +215,21 @@ namespace etch::analysis {
 
 			block() : base(type_tuple{}) {}
 
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(block" << std::endl;
-				for(auto &val : vals) {
-					val->dump(s, depth + 1) << std::endl;
-				}
-				return dump_depth(s, depth) << ')';
-			}
-
 			void push_back(ptr x) {
 				vals.push_back(x);
 				ty = x->ty;
+			}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(block";
+				if(!vals.empty()) {
+					s << std::endl;
+					for(auto &val : vals) {
+						val->dump(s, depth + 1) << std::endl;
+					}
+					dump_depth(s, depth);
+				}
+				return s << ')';
 			}
 		};
 
@@ -227,6 +239,12 @@ namespace etch::analysis {
 
 			function(ptr body) : base(type_function(body->ty)), body(body) {}
 
+			void push_arg(ptr x) {
+				args.push_back(x);
+				auto ty_fn = std::dynamic_pointer_cast<type_function>(ty);
+				ty_fn->push_arg(x->ty);
+			}
+
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(function" << std::endl;
 				for(auto &arg : args) {
@@ -234,12 +252,6 @@ namespace etch::analysis {
 				}
 				body->dump(s, depth + 1) << std::endl;
 				return dump_depth(s, depth) << ')';
-			}
-
-			void push_arg(ptr x) {
-				args.push_back(x);
-				auto ty_fn = std::dynamic_pointer_cast<type_function>(ty);
-				ty_fn->push_arg(x->ty);
 			}
 		};
 
@@ -258,10 +270,8 @@ namespace etch::analysis {
 		};
 	} // namspace value
 
-	using module_ = value::module_;
-
 	struct unit {
-		std::vector<std::shared_ptr<module_>> modules;
+		std::vector<std::shared_ptr<value::module_>> modules;
 
 		std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
 			value::base::dump_depth(s, depth) << "(unit" << std::endl;

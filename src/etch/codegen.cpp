@@ -128,7 +128,7 @@ namespace etch {
 		return r;
 	}
 
-	void codegen::run(std::shared_ptr<analysis::module_> am) {
+	void codegen::run(std::shared_ptr<analysis::value::module_> am) {
 		for(auto &val : am->defs) {
 			if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 				run(def);

@@ -78,8 +78,8 @@ namespace etch::analysis {
 			return std::static_pointer_cast<value::base>(std::make_shared<value::op>(name, lhs, rhs));
 		}
 
-		std::shared_ptr<module_> visit(const syntax::module &sm) {
-			auto m = std::make_shared<module_>();
+		std::shared_ptr<value::module_> visit(const syntax::module &sm) {
+			auto m = std::make_shared<value::module_>();
 			for(auto &st : sm) {
 				m->defs.emplace_back(visit(st));
 			}

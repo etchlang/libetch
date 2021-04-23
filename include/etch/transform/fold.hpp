@@ -57,7 +57,7 @@ namespace etch::transform {
 			return r;
 		}
 
-		void run(analysis::module_ &am) {
+		void run(analysis::value::module_ &am) {
 			for(auto &val : am.defs) {
 				val = run(val);
 			}

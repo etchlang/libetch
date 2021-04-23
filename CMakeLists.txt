@@ -41,7 +41,7 @@ set(ETCH_SRCS
 	src/etch/linker.cpp
 	src/etch/mangling.cpp
 	src/etch/parser.cpp
-	src/etch/parser/expr.cpp
+	src/etch/parser/unit.cpp
 )
 
 if(WIN32)

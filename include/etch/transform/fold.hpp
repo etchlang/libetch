@@ -62,6 +62,12 @@ namespace etch::transform {
 				val = run(val);
 			}
 		}
+
+		void run(analysis::unit &au) {
+			for(auto &am : au.modules) {
+				run(am);
+			}
+		}
 	};
 } // namespace etch::transform
 

@@ -65,6 +65,8 @@ namespace etch::syntax {
 
 	struct module : std::vector<statement> {};
 
+	struct unit : std::vector<module> {};
+
 	using arg = atom;
 	struct arglist : std::vector<arg> {};
 

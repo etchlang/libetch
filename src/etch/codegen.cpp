@@ -132,4 +132,10 @@ namespace etch {
 			}
 		}
 	}
+
+	void codegen::run(const analysis::unit &au) {
+		for(auto &am : au.modules) {
+			run(am);
+		}
+	}
 } // namespace etch

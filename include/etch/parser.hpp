@@ -4,11 +4,11 @@
 #include <etch/analysis/types.hpp>
 #include <etch/syntax/types.hpp>
 #include <etch/syntax/adapted.hpp>
-#include <etch/parser/module.hpp>
+#include <etch/parser/unit.hpp>
 #include <string_view>
 
 namespace etch {
-	syntax::module parse(std::string_view sv);
+	syntax::unit parse(std::string_view sv);
 } // namespace etch
 
 #endif

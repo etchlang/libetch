@@ -247,6 +247,18 @@ namespace etch::analysis {
 			return value::base::dump_depth(s, depth) << ')';
 		}
 	};
+
+	struct unit {
+		std::vector<module_> modules;
+
+		std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
+			value::base::dump_depth(s, depth) << "(unit" << std::endl;
+			for(auto &m : modules) {
+				m.dump(s, depth + 1) << std::endl;
+			}
+			return value::base::dump_depth(s, depth) << ')';
+		}
+	};
 } // namespace etch::analysis
 
 #endif

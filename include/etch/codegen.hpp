@@ -46,6 +46,7 @@ namespace etch {
 		llvm::Value * run(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr);
 		llvm::Constant * run(std::shared_ptr<analysis::value::definition>);
 		void run(const analysis::module_ &);
+		void run(const analysis::unit &);
 	};
 } // namespace etch
 

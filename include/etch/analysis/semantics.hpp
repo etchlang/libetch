@@ -81,9 +81,17 @@ namespace etch::analysis {
 		module_ run(const syntax::module &sm) {
 			module_ m;
 			for(auto &st : sm) {
-				m.defs.push_back(run(st));
+				m.defs.emplace_back(run(st));
 			}
 			return m;
+		}
+
+		unit run(const syntax::unit &su) {
+			unit u;
+			for(auto &sm : su) {
+				u.modules.emplace_back(run(sm));
+			}
+			return u;
 		}
 	};
 } // namespace etch::analysis

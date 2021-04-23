@@ -4,14 +4,15 @@
 #include <boost/spirit/home/x3.hpp>
 #include <etch/syntax/types.hpp>
 #include <etch/syntax/adapted.hpp>
-#include <etch/parser/module.hpp>
+#include <etch/parser/unit.hpp>
 
 namespace etch::parser {
 	namespace x3 = boost::spirit::x3;
 
 	// rules
 
-	const module_type module;
+	const unit_type unit;
+	const x3::rule<struct module_class,     syntax::module>     module;
 	const x3::rule<struct statement_class,  syntax::statement>  statement;
 	const x3::rule<struct expr_class,       syntax::expr>       expr;
 	const x3::rule<struct compound_class,   syntax::compound>   compound;
@@ -40,6 +41,7 @@ namespace etch::parser {
 
 	const auto arg = atom;
 
+	const auto unit_def       = x3::repeat(1)[module];
 	const auto module_def     = *statement;
 	const auto statement_def  = definition | expr;
 	const auto expr_def       = function | compound;
@@ -57,14 +59,14 @@ namespace etch::parser {
 	const auto integer_def    = ws >> x3::int_ >> ws;
 
 	BOOST_SPIRIT_DEFINE(
-		module, statement, expr, compound, atom, primary, definition, function,
+		unit, module, statement, expr, compound, atom, primary, definition, function,
 		arglist, op, block, tuple, identifier, integer
 	)
 } // namespace etch::parser
 
 namespace etch {
-	const parser::module_type & module() {
-		return parser::module;
+	const parser::unit_type & unit() {
+		return parser::unit;
 	}
 } // namespace etch
 

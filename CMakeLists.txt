@@ -38,6 +38,7 @@ add_definitions(
 set(ETCH_SRCS
 	src/etch/codegen.cpp
 	src/etch/compiler.cpp
+	src/etch/linker.cpp
 	src/etch/parser.cpp
 	src/etch/parser/expr.cpp
 )
@@ -94,6 +95,18 @@ set(ETCH_INCLUDE_DIRS ${ETCH_INCLUDE_DIRS}
 	${LLVM_INCLUDE_DIRS}
 )
 
+set(ETCH_LIBRARY_DIRS ${ETCH_LIBRARY_DIRS}
+	${LLVM_LIBRARY_DIRS}
+)
+
+# LLD
+
+find_package(LLD REQUIRED CONFIG)
+
+set(ETCH_INCLUDE_DIRS ${ETCH_INCLUDE_DIRS}
+	${LLD_INCLUDE_DIRS}
+)
+
 # macOS kludge
 
 set(ETCH_FRAMEWORKS ${ETCH_LIBS})
@@ -107,7 +120,7 @@ llvm_config(etch)
 target_compile_definitions(etch PRIVATE ${ETCH_DEFINITIONS})
 target_include_directories(etch PRIVATE ${ETCH_INCLUDE_DIRS})
 target_link_directories(etch PRIVATE ${ETCH_LIBRARY_DIRS})
-target_link_libraries(etch ${ETCH_LIBS})
+target_link_libraries(etch ${ETCH_LIBS} lldCOFF)
 set_property(TARGET etch PROPERTY CXX_STANDARD 17)
 set_property(TARGET etch PROPERTY CXX_STANDARD_REQUIRED ON)
 
@@ -121,18 +134,9 @@ if(ENABLE_CLANG_TIDY)
 	endif()
 endif()
 
-set(ETCH_LIBRARY_DIRS ${ETCH_LIBRARY_DIRS}
-	${LLVM_LIBRARY_DIRS}
-)
-
-set(ETCH_LIBS ${ETCH_LIBS}
-	${LLVM_AVAILABLE_LIBS}
-)
-
 get_directory_property(HAS_PARENT PARENT_DIRECTORY)
 if(HAS_PARENT)
 	set(ETCH_DEFINITIONS  ${ETCH_DEFINITIONS}  PARENT_SCOPE)
 	set(ETCH_INCLUDE_DIRS ${ETCH_INCLUDE_DIRS} PARENT_SCOPE)
 	set(ETCH_LIBRARY_DIRS ${ETCH_LIBRARY_DIRS} PARENT_SCOPE)
-	set(ETCH_LIBS         ${ETCH_LIBS}         PARENT_SCOPE)
 endif()

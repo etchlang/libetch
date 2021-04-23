@@ -23,10 +23,14 @@ namespace etch {
 
 		// output LLVM assembly to string
 
-		std::string ll;
-		llvm::raw_string_ostream os(ll);
-		os << *m;
-		os.flush();
+		if(tgt == target::llvm_assembly) {
+			std::string ll;
+			llvm::raw_string_ostream os(ll);
+			os << *m;
+			os.flush();
+
+			return ll;
+		}
 
 		// emit object
 
@@ -56,7 +60,7 @@ namespace etch {
 
 		llvm::legacy::PassManager pm;
 
-		auto ft = interpreter ? llvm::CGFT_AssemblyFile : llvm::CGFT_ObjectFile;
+		auto ft = tgt == target::binary ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
 
 		if(target_machine->addPassesToEmitFile(pm, s_output, nullptr, ft)) {
 			std::cerr << "ERROR: cannot emit file type" << std::endl;

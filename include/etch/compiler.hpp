@@ -6,13 +6,19 @@
 
 namespace etch {
 	class compiler {
+	  public:
+		enum class target {
+			llvm_assembly,
+			assembly,
+			binary
+		};
+	  private:
 		std::shared_ptr<llvm::LLVMContext> ctx = std::make_shared<llvm::LLVMContext>();
 		std::shared_ptr<llvm::Module> m;
 	  public:
-		bool interpreter = false;
+		target tgt = target::binary;
 
-		compiler(std::string name, bool interpreter = false) : m(std::make_shared<llvm::Module>(name, *ctx)), interpreter(interpreter) {}
-		compiler(bool interpreter = false) : compiler("a.e", interpreter) {}
+		compiler(std::string name = "a.e") : m(std::make_shared<llvm::Module>(name, *ctx)) {}
 
 		std::string run(std::string_view);
 	};

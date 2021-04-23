@@ -39,12 +39,14 @@ namespace etch::parser {
 
 	const auto opname = ws >> +char_opname >> ws;
 
+	const auto module_expr = ws >> "#{" >> module >> '}' >> ws;
+
 	const auto arg = atom;
 
 	const auto unit_def       = x3::repeat(1)[module];
 	const auto module_def     = *statement;
 	const auto statement_def  = definition | expr;
-	const auto expr_def       = function | compound;
+	const auto expr_def       = module_expr | function | compound;
 	const auto compound_def   = op | atom;
 	const auto atom_def       = primary >> ':' >> atom | primary;
 	const auto primary_def    = block | tuple | identifier | integer;

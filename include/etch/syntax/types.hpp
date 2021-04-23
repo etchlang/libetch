@@ -49,6 +49,7 @@ namespace etch::syntax {
 
 	struct expr : x3::variant<
 		compound,
+		x3::forward_ast<struct module>,
 		x3::forward_ast<struct function>
 	> {
 		using base_type::base_type;

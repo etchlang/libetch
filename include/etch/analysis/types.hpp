@@ -156,18 +156,22 @@ namespace etch::analysis {
 			}
 		};
 
-		struct op : base {
-			std::shared_ptr<identifier> name;
-			ptr lhs;
-			ptr rhs;
+		struct call : base {
+			ptr fn;
+			std::vector<ptr> args;
 
-			op(identifier::string_type name, ptr lhs, ptr rhs) : base(lhs->ty), name(std::make_shared<identifier>(name)), lhs(lhs), rhs(rhs) {}
+			call(ptr fn) : base(type_int{32} /* XXX */), fn(fn) {}
+
+			void push_arg(ptr x) {
+				args.push_back(x);
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(op" << std::endl;
-				name->dump(s, depth + 1) << std::endl;
-				lhs->dump(s, depth + 1) << std::endl;
-				rhs->dump(s, depth + 1) << std::endl;
+				s << "(call" << std::endl;
+				fn->dump(s, depth + 1) << std::endl;
+				for(auto &arg : args) {
+					arg->dump(s, depth + 1) << std::endl;
+				}
 				return dump_depth(s, depth) << ')';
 			}
 		};

@@ -82,7 +82,7 @@ namespace etch::syntax {
 	};
 
 	struct op {
-		std::string opname;
+		identifier opname;
 		atom lhs;
 		expr rhs;
 	};

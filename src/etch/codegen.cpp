@@ -50,12 +50,22 @@ namespace etch {
 			} else {
 				r = sym;
 			}
-		} else if(auto op = std::dynamic_pointer_cast<analysis::value::op>(val)) {
-			auto lhs = run(scp, builder, op->lhs);
-			auto rhs = run(scp, builder, op->rhs);
-
-			if(op->name->str == "+") {
+		} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
+			auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn);
+			if(id && id->str == "+") {
+				auto lhs = run(scp, builder, call->args[0]);
+				auto rhs = run(scp, builder, call->args[1]);
 				r = builder.CreateAdd(lhs, rhs);
+			} else {
+				auto f = llvm::cast<llvm::Function>(run(scp, builder, call->fn));
+
+				std::vector<llvm::Value *> args;
+				for(auto &arg : call->args) {
+					if(auto v = run(scp, builder, arg)) {
+						args.emplace_back(v);
+					}
+				}
+				r = builder.CreateCall(f->getFunctionType(), f, args);
 			}
 		} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 			auto val = run(scp, builder, def->val);
@@ -64,13 +74,12 @@ namespace etch {
 			scp->push(def->name.str, val);
 
 			r = val;
+		} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
 		} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
 			for(auto &val : block->vals) {
 				r = run(scp, builder, val);
 			}
-		}
-
-		if(!r) {
+		} else {
 			std::cout << "UNHANDLED VALUE: ";
 			val->dump() << std::endl;
 		}

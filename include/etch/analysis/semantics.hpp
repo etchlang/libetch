@@ -72,10 +72,26 @@ namespace etch::analysis {
 		}
 
 		value::ptr visit(const syntax::op &so) {
-			std::string name(so.opname);
-			auto lhs = visit(so.lhs);
-			auto rhs = visit(so.rhs);
-			return std::static_pointer_cast<value::base>(std::make_shared<value::op>(name, lhs, rhs));
+			std::shared_ptr<value::call> c;
+
+			if(so.opname == "<-") {
+				c = std::make_shared<value::call>(visit(so.lhs));
+
+				auto rhs = visit(so.rhs);
+				if(auto t = std::dynamic_pointer_cast<value::tuple>(rhs)) {
+					for(auto &val : t->vals) {
+						c->push_arg(val);
+					}
+				} else {
+					c->push_arg(visit(so.rhs));
+				}
+			} else {
+				c = std::make_shared<value::call>(visit(so.opname));
+				c->push_arg(visit(so.lhs));
+				c->push_arg(visit(so.rhs));
+			}
+
+			return std::static_pointer_cast<value::base>(c);
 		}
 
 		std::shared_ptr<value::module_> visit(const syntax::module &sm) {

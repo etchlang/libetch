@@ -39,7 +39,7 @@ namespace etch::parser {
 
 	const auto opname = ws >> +char_opname >> ws;
 
-	const auto module_expr = ws >> "#{" >> module >> '}' >> ws;
+	const auto module_expr = ws >> "@{" >> module >> '}' >> ws;
 
 	const auto arg = atom;
 

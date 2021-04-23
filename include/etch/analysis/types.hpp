@@ -122,6 +122,14 @@ namespace etch::analysis {
 			}
 		};
 
+		struct type_module : base {
+			type_module() : base(type_type{}) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(type_module)";
+			}
+		};
+
 		struct constant_integer : base {
 			int32_t val;
 
@@ -234,27 +242,31 @@ namespace etch::analysis {
 				ty_fn->push_arg(x->ty);
 			}
 		};
+
+		struct module_ : base {
+			std::vector<ptr> defs;
+
+			module_() : base(type_module{}) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(module" << std::endl;
+				for(auto &def : defs) {
+					def->dump(s, depth + 1) << std::endl;
+				}
+				return dump_depth(s, depth) << ')';
+			}
+		};
 	} // namspace value
 
-	struct module_ {
-		std::vector<value::ptr> defs;
-
-		std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
-			value::base::dump_depth(s, depth) << "(module" << std::endl;
-			for(auto &def : defs) {
-				def->dump(s, depth + 1) << std::endl;
-			}
-			return value::base::dump_depth(s, depth) << ')';
-		}
-	};
+	using module_ = value::module_;
 
 	struct unit {
-		std::vector<module_> modules;
+		std::vector<std::shared_ptr<module_>> modules;
 
 		std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
 			value::base::dump_depth(s, depth) << "(unit" << std::endl;
 			for(auto &m : modules) {
-				m.dump(s, depth + 1) << std::endl;
+				m->dump(s, depth + 1) << std::endl;
 			}
 			return value::base::dump_depth(s, depth) << ')';
 		}

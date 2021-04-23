@@ -36,6 +36,8 @@ namespace etch {
 
 		std::unordered_map<std::string, std::shared_ptr<scope>> scopes;
 		std::shared_ptr<scope> scope_module = std::make_shared<scope>();
+
+		std::vector<std::string> stack;
 	  public:
 		codegen(std::shared_ptr<llvm::LLVMContext> ctx, std::shared_ptr<llvm::Module> m) : ctx(ctx), m(m) {}
 
@@ -45,7 +47,7 @@ namespace etch {
 
 		llvm::Value * run(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr);
 		llvm::Constant * run(std::shared_ptr<analysis::value::definition>);
-		void run(const analysis::module_ &);
+		void run(std::shared_ptr<analysis::module_>);
 		void run(const analysis::unit &);
 	};
 } // namespace etch

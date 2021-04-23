@@ -8,7 +8,6 @@
 
 namespace etch::analysis {
 	class semantics {
-		unit u;
 	  public:
 		template<typename T>
 		value::ptr visit(const syntax::typed<T> &x) {
@@ -53,11 +52,6 @@ namespace etch::analysis {
 			return std::static_pointer_cast<value::base>(std::make_shared<value::constant_integer>(i.value));
 		}
 
-		value::ptr visit(const syntax::module &sm) {
-			u.modules.emplace_back(run(sm));
-			return nullptr;
-		}
-
 		value::ptr visit(const syntax::function &sf) {
 			auto body = visit(sf.value);
 			auto f = std::make_shared<value::function>(body);
@@ -73,11 +67,8 @@ namespace etch::analysis {
 
 		value::ptr visit(const syntax::definition &sd) {
 			std::string name(sd.name);
-			if(auto val = visit(sd.value)) {
-				return std::static_pointer_cast<value::base>(std::make_shared<value::definition>(name, val));
-			} else {
-				return nullptr;
-			}
+			auto val = visit(sd.value);
+			return std::static_pointer_cast<value::base>(std::make_shared<value::definition>(name, val));
 		}
 
 		value::ptr visit(const syntax::op &so) {
@@ -87,19 +78,18 @@ namespace etch::analysis {
 			return std::static_pointer_cast<value::base>(std::make_shared<value::op>(name, lhs, rhs));
 		}
 
-		module_ run(const syntax::module &sm) {
-			module_ m;
+		std::shared_ptr<module_> visit(const syntax::module &sm) {
+			auto m = std::make_shared<module_>();
 			for(auto &st : sm) {
-				if(auto val = visit(st)) {
-					m.defs.emplace_back(val);
-				}
+				m->defs.emplace_back(visit(st));
 			}
 			return m;
 		}
 
 		unit run(const syntax::unit &su) {
+			unit u;
 			for(auto &sm : su) {
-				u.modules.emplace_back(run(sm));
+				u.modules.emplace_back(visit(sm));
 			}
 			return u;
 		}

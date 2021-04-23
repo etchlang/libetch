@@ -12,7 +12,7 @@ namespace etch {
 		}
 		args.emplace_back("/subsystem:CONSOLE");
 
-		std::string str_entry("/entry:" + mangle("main"));
+		std::string str_entry("/entry:" + mangle({"etch", "rt", "entry"}));
 		args.emplace_back(str_entry.data());
 
 		std::string str_out("/out:" + output);

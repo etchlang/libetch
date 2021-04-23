@@ -81,7 +81,8 @@ namespace etch {
 	llvm::Constant * codegen::run(std::shared_ptr<analysis::value::definition> def) {
 		llvm::Constant *r = nullptr;
 
-		auto mangled = mangle(def->name.str);
+		stack.emplace_back(def->name.str);
+		auto mangled = mangle(stack);
 
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
 			auto c = constant(i);
@@ -114,19 +115,21 @@ namespace etch {
 			}
 
 			r = f;
-		}
-
-		if(!r) {
+		} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(def->val)) {
+			run(m);
+		} else {
 			std::cout << "UNHANDLED GLOBAL VALUE: ";
 			def->val->dump() << std::endl;
 		}
+
+		stack.pop_back();
 
 		scope_module->push(def->name.str, r);
 		return r;
 	}
 
-	void codegen::run(const analysis::module_ &am) {
-		for(auto &val : am.defs) {
+	void codegen::run(std::shared_ptr<analysis::module_> am) {
+		for(auto &val : am->defs) {
 			if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 				run(def);
 			}

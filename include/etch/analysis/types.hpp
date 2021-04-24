@@ -164,6 +164,18 @@ namespace etch::analysis {
 			}
 		};
 
+		struct intrinsic : base {
+			using string_type = std::string;
+
+			string_type str;
+
+			intrinsic(string_type str) : base(type_unresolved{}), str(str) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(intrinsic " << str << ')';
+			}
+		};
+
 		struct call : base {
 			ptr fn;
 			std::vector<ptr> args;

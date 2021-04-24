@@ -16,6 +16,7 @@ namespace etch::syntax {
 	struct tuple : std::vector<struct expr> {};
 
 	struct identifier : std::string {};
+	struct intrinsic : std::string {};
 
 	struct integer {
 		int32_t value;
@@ -24,6 +25,7 @@ namespace etch::syntax {
 	struct primary : x3::variant<
 		integer,
 		identifier,
+		intrinsic,
 		block,
 		tuple
 	> {

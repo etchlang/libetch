@@ -48,6 +48,10 @@ namespace etch::analysis {
 			return std::static_pointer_cast<value::base>(std::make_shared<value::identifier>(x));
 		}
 
+		value::ptr visit(const syntax::intrinsic &x) {
+			return std::static_pointer_cast<value::base>(std::make_shared<value::intrinsic>(x));
+		}
+
 		value::ptr visit(const syntax::integer &i) {
 			return std::static_pointer_cast<value::base>(std::make_shared<value::constant_integer>(i.value));
 		}

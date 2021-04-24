@@ -169,10 +169,22 @@ namespace etch {
 		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->val)) {
 			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
 			r = llvm::GlobalAlias::create(mangled, gv);
+		} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intrinsic>(def->val)) {
+			if(intr->str == "int") {
+			} else {
+				std::ostringstream s;
+				s << "codegen: unhandled global intrinsic: ";
+				def->val->dump(s);
+				auto str = s.str();
+
+				std::cerr << str << std::endl << std::endl;
+				throw std::runtime_error(s.str());
+			}
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
 			r = function(fn, mangled);
 		} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(def->val)) {
 			run(m);
+		} else if(std::dynamic_pointer_cast<analysis::value::type_int>(def->val)) {
 		} else {
 			std::ostringstream s;
 			s << "codegen: unhandled global: ";

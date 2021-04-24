@@ -16,8 +16,8 @@ namespace etch {
 		auto sm = parse(sv);
 		auto am = analysis::semantics{}.run(sm);
 
-		transform::fold{}.run(am);
 		transform::resolution{}.run(am);
+		transform::fold{}.run(am);
 
 		codegen{ctx, m}.run(am);
 

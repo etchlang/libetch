@@ -4,15 +4,15 @@
 namespace etch::transform {
 	class resolution {
 		struct scope {
-			std::unordered_map<std::string, analysis::value::ptr> types;
+			std::unordered_map<std::string, analysis::value::ptr> syms;
 		};
 
 		std::vector<scope> stack;
 	  public:
 		analysis::value::ptr lookup(std::string name) const {
 			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				auto search = it->types.find(name);
-				if(search != it->types.end()) {
+				auto search = it->syms.find(name);
+				if(search != it->syms.end()) {
 					return search->second;
 				}
 			}
@@ -22,10 +22,15 @@ namespace etch::transform {
 		analysis::value::ptr run(analysis::value::ptr val) {
 			auto r = val;
 
-			if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
+			if(std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
 			} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
-				if(auto ty = lookup(id->str)) {
-					val->ty = ty;
+				if(auto find = lookup(id->str)) {
+					if(std::dynamic_pointer_cast<analysis::value::type_type>(find->ty)) {
+						r = find;
+					} else if(std::dynamic_pointer_cast<analysis::value::type_function>(find->ty)) {
+						r = find;
+					}
+					val->ty = find->ty;
 				} else if(id->str == "+" || id->str == "*") {
 					auto ity = std::make_shared<analysis::value::type_int>(32);
 					auto fty = std::make_shared<analysis::value::type_function>(ity);
@@ -33,6 +38,15 @@ namespace etch::transform {
 					fty->push_arg(ity);
 
 					id->ty = fty;
+				}
+			} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intrinsic>(val)) {
+				if(intr->str == "int") {
+					auto tyty = std::make_shared<analysis::value::type_type>();
+					auto ity = std::make_shared<analysis::value::type_int>(32);
+					auto fty = std::make_shared<analysis::value::type_function>(tyty);
+					fty->push_arg(ity);
+
+					intr->ty = fty;
 				}
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 				call->fn = run(call->fn);
@@ -46,9 +60,9 @@ namespace etch::transform {
 			} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 				def->val = run(def->val);
 				def->name.ty = def->val->ty;
-				def->ty       = def->val->ty;
+				def->ty      = def->val->ty;
 
-				stack.back().types.emplace(def->name.str, def->ty);
+				stack.back().syms.emplace(def->name.str, def->val);
 			} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
 				for(auto &val : tuple->vals) {
 					val = run(val);
@@ -72,7 +86,7 @@ namespace etch::transform {
 					arg->ty = std::make_shared<analysis::value::type_int>(32);
 
 					auto id = std::dynamic_pointer_cast<analysis::value::identifier>(arg);
-					stack.back().types.emplace(id->str, arg->ty);
+					stack.back().syms.emplace(id->str, arg);
 				}
 
 				fn->body = run(fn->body);
@@ -92,11 +106,11 @@ namespace etch::transform {
 				}
 
 				stack.pop_back();
-			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_type>(val)) {
+			} else if(std::dynamic_pointer_cast<analysis::value::type_type>(val)) {
 				// bail to avoid recursing with null type
 				return r;
-			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
-			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
+			} else if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
+			} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_tuple>(val)) {
 				for(auto &ty_inner : ty->tys) {
 					ty_inner = run(ty_inner);
@@ -106,7 +120,7 @@ namespace etch::transform {
 					arg = run(arg);
 				}
 				ty->body = run(ty->body);
-			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_module>(val)) {
+			} else if(std::dynamic_pointer_cast<analysis::value::type_module>(val)) {
 			} else {
 				std::ostringstream s;
 				s << "analysis::resolution: unhandled value: ";

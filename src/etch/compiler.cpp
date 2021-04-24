@@ -19,6 +19,10 @@ namespace etch {
 		transform::resolution{}.run(am);
 		transform::fold{}.run(am);
 
+		if(debug) {
+			am.dump() << std::endl;
+		}
+
 		codegen{ctx, m}.run(am);
 
 		llvm::verifyModule(*m, &llvm::errs());

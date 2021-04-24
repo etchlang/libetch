@@ -16,6 +16,7 @@ namespace etch {
 		std::shared_ptr<llvm::LLVMContext> ctx = std::make_shared<llvm::LLVMContext>();
 		std::shared_ptr<llvm::Module> m;
 	  public:
+		bool debug = false;
 		target tgt = target::binary;
 
 		compiler(std::string name = "a.e") : m(std::make_shared<llvm::Module>(name, *ctx)) {}

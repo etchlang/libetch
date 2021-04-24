@@ -37,6 +37,33 @@ namespace etch {
 		return r;
 	}
 
+	llvm::Function * codegen::function(std::shared_ptr<analysis::value::function> fn, std::string name) {
+		auto scp = std::make_shared<scope>(scope_module);
+
+		auto lty_fn = llvm::cast<llvm::FunctionType>(type(fn->ty));
+		auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, name, *m);
+
+		for(size_t i = 0; i < fn->args.size(); ++i) {
+			auto arg_name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);
+
+			auto arg = f->getArg((unsigned int)i);
+			arg->setName(arg_name->str);
+
+			scp->push(arg_name->str, arg);
+		}
+
+		auto bb = llvm::BasicBlock::Create(*ctx, "entry", f);
+
+		llvm::IRBuilder<> builder(bb);
+		if(auto ret = run(scp, builder, fn->body)) {
+			builder.CreateRet(ret);
+		} else {
+			builder.CreateRetVoid();
+		}
+
+		return f;
+	}
+
 	llvm::Value * codegen::run(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, analysis::value::ptr val) {
 		llvm::Value *r = nullptr;
 
@@ -56,6 +83,10 @@ namespace etch {
 				auto lhs = run(scp, builder, call->args[0]);
 				auto rhs = run(scp, builder, call->args[1]);
 				r = builder.CreateAdd(lhs, rhs);
+			} else if(id && id->str == "*") {
+				auto lhs = run(scp, builder, call->args[0]);
+				auto rhs = run(scp, builder, call->args[1]);
+				r = builder.CreateMul(lhs, rhs);
 			} else {
 				auto f = llvm::cast<llvm::Function>(run(scp, builder, call->fn));
 
@@ -65,11 +96,19 @@ namespace etch {
 						args.emplace_back(v);
 					}
 				}
-				r = builder.CreateCall(f->getFunctionType(), f, args);
+
+				auto c = builder.CreateCall(f->getFunctionType(), f, args);
+				if(!f->getReturnType()->isVoidTy()) {
+					r = c;
+				}
 			}
 		} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 			auto val = run(scp, builder, def->val);
-			val->setName(def->name.str);
+
+			auto def_fn = std::dynamic_pointer_cast<analysis::value::function>(def->val);
+			if(!def_fn) {
+				val->setName(def->name.str);
+			}
 
 			scp->push(def->name.str, val);
 
@@ -79,6 +118,13 @@ namespace etch {
 			for(auto &val : block->vals) {
 				r = run(scp, builder, val);
 			}
+		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(val)) {
+			stack.emplace_back("anon");
+			auto mangled = mangle(stack);
+			stack.pop_back();
+
+			r = function(fn, mangled);
+
 		} else {
 			std::cout << "UNHANDLED VALUE: ";
 			val->dump() << std::endl;
@@ -100,30 +146,7 @@ namespace etch {
 			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
 			r = llvm::GlobalAlias::create(mangled, gv);
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
-			auto scp = std::make_shared<scope>(scope_module);
-
-			auto lty_fn = llvm::cast<llvm::FunctionType>(type(def->val->ty));
-			auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, mangled, *m);
-
-			for(size_t i = 0; i < fn->args.size(); ++i) {
-				auto name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);
-
-				auto arg = f->getArg((unsigned int)i);
-				arg->setName(name->str);
-
-				scp->push(name->str, arg);
-			}
-
-			auto bb = llvm::BasicBlock::Create(*ctx, "entry", f);
-
-			llvm::IRBuilder<> builder(bb);
-			if(auto ret = run(scp, builder, fn->body)) {
-				builder.CreateRet(ret);
-			} else {
-				builder.CreateRetVoid();
-			}
-
-			r = f;
+			r = function(fn, mangled);
 		} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(def->val)) {
 			run(m);
 		} else {

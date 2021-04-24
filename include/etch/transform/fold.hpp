@@ -20,6 +20,7 @@ namespace etch::transform {
 			} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
 				ty_fn->body = run(ty_fn->body);
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
+				call->fn = run(call->fn);
 				for(auto &arg : call->args) {
 					arg = run(arg);
 				}
@@ -28,9 +29,12 @@ namespace etch::transform {
 					auto lhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[0]);
 					auto rhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[1]);
 					if(lhs && rhs) {
-						auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn);
-						if(id && id->str == "+") {
-							r = std::make_shared<analysis::value::constant_integer>(lhs->val + rhs->val);
+						if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn)) {
+							if(id->str == "+") {
+								r = std::make_shared<analysis::value::constant_integer>(lhs->val + rhs->val);
+							} else if(id->str == "*") {
+								r = std::make_shared<analysis::value::constant_integer>(lhs->val * rhs->val);
+							}
 						}
 					}
 				}

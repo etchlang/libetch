@@ -19,7 +19,14 @@ namespace etch {
 
 			auto lty_ret = type(ty_fn->body);
 
+			if(llvm::isa<llvm::FunctionType>(lty_ret)) {
+				lty_ret = lty_ret->getPointerTo();
+			}
+
 			r = llvm::FunctionType::get(lty_ret, lty_args, false);
+		} else {
+			std::cout << "UNHANDLED TYPE: ";
+			ty->dump() << std::endl;
 		}
 
 		return r;
@@ -88,7 +95,12 @@ namespace etch {
 				auto rhs = run(scp, builder, call->args[1]);
 				r = builder.CreateMul(lhs, rhs);
 			} else {
-				auto f = llvm::cast<llvm::Function>(run(scp, builder, call->fn));
+				auto fval = run(scp, builder, call->fn);
+				auto fvalty = fval->getType();
+
+				if(fvalty->isPointerTy()) {
+					fvalty = fvalty->getPointerElementType();
+				}
 
 				std::vector<llvm::Value *> args;
 				for(auto &arg : call->args) {
@@ -97,8 +109,9 @@ namespace etch {
 					}
 				}
 
-				auto c = builder.CreateCall(f->getFunctionType(), f, args);
-				if(!f->getReturnType()->isVoidTy()) {
+				auto fty = llvm::cast<llvm::FunctionType>(fvalty);
+				auto c = builder.CreateCall(fty, fval, args);
+				if(!fty->getReturnType()->isVoidTy()) {
 					r = c;
 				}
 			}

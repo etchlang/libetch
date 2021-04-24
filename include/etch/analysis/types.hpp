@@ -55,6 +55,14 @@ namespace etch::analysis {
 			}
 		};
 
+		struct type_unresolved : base {
+			type_unresolved() : base(type_type{}) {}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(type_unresolved)";
+			}
+		};
+
 		struct type_any : base {
 			type_any() : base(type_type{}) {}
 
@@ -149,7 +157,7 @@ namespace etch::analysis {
 
 			string_type str;
 
-			identifier(string_type str = "") : base(type_int{32} /* XXX */), str(str) {}
+			identifier(string_type str = "") : base(type_unresolved{}), str(str) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(identifier " << str << ')';
@@ -160,7 +168,7 @@ namespace etch::analysis {
 			ptr fn;
 			std::vector<ptr> args;
 
-			call(ptr fn) : base(type_int{32} /* XXX */), fn(fn) {}
+			call(ptr fn) : base(fn->ty), fn(fn) {}
 
 			void push_arg(ptr x) {
 				args.push_back(x);

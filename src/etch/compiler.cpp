@@ -3,6 +3,7 @@
 #include <etch/compiler.hpp>
 #include <etch/parser.hpp>
 #include <etch/transform/fold.hpp>
+#include <etch/transform/resolution.hpp>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -16,6 +17,7 @@ namespace etch {
 		auto am = analysis::semantics{}.run(sm);
 
 		transform::fold{}.run(am);
+		transform::resolution{}.run(am);
 
 		codegen{ctx, m}.run(am);
 

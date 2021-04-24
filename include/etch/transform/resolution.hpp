@@ -1,59 +1,97 @@
-#ifndef ETCH_TRANSFORM_FOLD_HPP
-#define ETCH_TRANSFORM_FOLD_HPP 1
+#ifndef ETCH_TRANSFORM_RESOLUTION_HPP
+#define ETCH_TRANSFORM_RESOLUTION_HPP 1
 
 namespace etch::transform {
-	class fold {
-	  public:
-		analysis::value::ptr run(analysis::value::ptr val) {
-			if(val == nullptr) { return val; }
+	class resolution {
+		struct scope {
+			std::unordered_map<std::string, analysis::value::ptr> types;
+		};
 
+		std::vector<scope> stack;
+	  public:
+		analysis::value::ptr lookup(std::string name) const {
+			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
+				auto search = it->types.find(name);
+				if(search != it->types.end()) {
+					return search->second;
+				}
+			}
+			return nullptr;
+		}
+
+		analysis::value::ptr run(analysis::value::ptr val) {
 			auto r = val;
 
 			if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
 			} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
+				if(auto ty = lookup(id->str)) {
+					val->ty = ty;
+				} else if(id->str == "+" || id->str == "*") {
+					auto ity = std::make_shared<analysis::value::type_int>(32);
+					auto fty = std::make_shared<analysis::value::type_function>(ity);
+					fty->push_arg(ity);
+					fty->push_arg(ity);
+
+					id->ty = fty;
+				}
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 				call->fn = run(call->fn);
 				for(auto &arg : call->args) {
 					arg = run(arg);
 				}
 
-				if(call->args.size() == 2) {
-					auto lhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[0]);
-					auto rhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[1]);
-					if(lhs && rhs) {
-						if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn)) {
-							if(id->str == "+") {
-								r = std::make_shared<analysis::value::constant_integer>(lhs->val + rhs->val);
-							} else if(id->str == "*") {
-								r = std::make_shared<analysis::value::constant_integer>(lhs->val * rhs->val);
-							}
-						}
-					}
+				if(auto fty = std::dynamic_pointer_cast<analysis::value::type_function>(call->fn->ty)) {
+					call->ty = fty->body;
 				}
 			} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 				def->val = run(def->val);
+				def->name.ty = def->val->ty;
+				def->ty       = def->val->ty;
+
+				stack.back().types.emplace(def->name.str, def->ty);
 			} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
 				for(auto &val : tuple->vals) {
 					val = run(val);
 				}
-
-				if(tuple->vals.size() == 1) {
-					r = tuple->vals[0];
-				}
 			} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
+				stack.emplace_back(scope{});
+
 				for(auto &val : block->vals) {
 					val = run(val);
 				}
 
-				if(block->vals.size() == 1) {
-					r = block->vals[0];
+				if(!block->vals.empty()) {
+					block->ty = block->vals.back()->ty;
 				}
+
+				stack.pop_back();
 			} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(val)) {
+				stack.emplace_back(scope{});
+
+				for(auto &arg : fn->args) {
+					arg->ty = std::make_shared<analysis::value::type_int>(32);
+
+					auto id = std::dynamic_pointer_cast<analysis::value::identifier>(arg);
+					stack.back().types.emplace(id->str, arg->ty);
+				}
+
 				fn->body = run(fn->body);
+
+				auto fty = std::make_shared<analysis::value::type_function>(fn->body->ty);
+				for(auto &arg : fn->args) {
+					fty->push_arg(arg->ty);
+				}
+				fn->ty = fty;
+
+				stack.pop_back();
 			} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(val)) {
+				stack.emplace_back(scope{});
+
 				for(auto &def : m->defs) {
 					def = run(def);
 				}
+
+				stack.pop_back();
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_type>(val)) {
 				// bail to avoid recursing with null type
 				return r;
@@ -63,10 +101,6 @@ namespace etch::transform {
 				for(auto &ty_inner : ty->tys) {
 					ty_inner = run(ty_inner);
 				}
-
-				if(ty->tys.size() == 1) {
-					r = ty->tys[0];
-				}
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
 				for(auto &arg : ty->args) {
 					arg = run(arg);
@@ -75,7 +109,7 @@ namespace etch::transform {
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_module>(val)) {
 			} else {
 				std::ostringstream s;
-				s << "analysis::fold: unhandled value: ";
+				s << "analysis::resolution: unhandled value: ";
 				val->dump(s);
 				auto str = s.str();
 
@@ -84,6 +118,15 @@ namespace etch::transform {
 			}
 
 			val->ty = run(val->ty);
+
+			if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(r->ty)) {
+				std::ostringstream s;
+				s << "analysis::resolution: unresolved type: ";
+				r->dump(s);
+				auto str = s.str();
+
+				std::cerr << str << std::endl << std::endl;
+			}
 
 			return r;
 		}

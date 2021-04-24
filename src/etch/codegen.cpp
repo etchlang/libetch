@@ -1,5 +1,6 @@
 #include <etch/codegen.hpp>
 #include <etch/mangling.hpp>
+#include <sstream>
 
 namespace etch {
 	llvm::Type * codegen::type(analysis::value::ptr ty) {
@@ -25,8 +26,13 @@ namespace etch {
 
 			r = llvm::FunctionType::get(lty_ret, lty_args, false);
 		} else {
-			std::cout << "UNHANDLED TYPE: ";
-			ty->dump() << std::endl;
+			std::ostringstream s;
+			s << "codegen: unhandled type: ";
+			ty->dump(s);
+			auto str = s.str();
+
+			std::cerr << str << std::endl << std::endl;
+			throw std::runtime_error(s.str());
 		}
 
 		return r;
@@ -139,8 +145,13 @@ namespace etch {
 			r = function(fn, mangled);
 
 		} else {
-			std::cout << "UNHANDLED VALUE: ";
-			val->dump() << std::endl;
+			std::ostringstream s;
+			s << "codegen: unhandled value: ";
+			val->dump(s);
+			auto str = s.str();
+
+			std::cerr << str << std::endl << std::endl;
+			throw std::runtime_error(s.str());
 		}
 
 		return r;
@@ -163,8 +174,13 @@ namespace etch {
 		} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(def->val)) {
 			run(m);
 		} else {
-			std::cout << "UNHANDLED GLOBAL VALUE: ";
-			def->val->dump() << std::endl;
+			std::ostringstream s;
+			s << "codegen: unhandled global: ";
+			def->val->dump(s);
+			auto str = s.str();
+
+			std::cerr << str << std::endl << std::endl;
+			throw std::runtime_error(s.str());
 		}
 
 		stack.pop_back();

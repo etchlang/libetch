@@ -9,14 +9,16 @@ namespace etch {
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
 			r = llvm::Type::getIntNTy(*ctx, (unsigned int)ty_int->width);
 		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(ty)) {
-			if(ty_tuple->tys.empty()) {
-				r = llvm::Type::getVoidTy(*ctx);
+			std::vector<llvm::Type *> lty_vals;
+			for(auto &ty : ty_tuple->tys) {
+				lty_vals.emplace_back(type(ty));
 			}
+
+			auto lty = llvm::StructType::get(*ctx, lty_vals);
+			r = lty;
 		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(ty)) {
 			std::vector<llvm::Type *> lty_args;
-			for(auto &arg : ty_fn->args) {
-				lty_args.push_back(type(arg));
-			}
+			lty_args.emplace_back(type(ty_fn->arg));
 
 			auto lty_ret = type(ty_fn->body);
 
@@ -50,28 +52,44 @@ namespace etch {
 		return r;
 	}
 
+	void codegen::bind(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, analysis::value::ptr val, llvm::Value *lval) {
+		if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
+			scp->push(id->str, lval);
+		} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
+			for(size_t i = 0; i < tuple->vals.size(); ++i) {
+				std::array<unsigned, 1> indices = {(unsigned)i};
+				auto el = builder.CreateExtractValue(lval, indices);
+				bind(scp, builder, tuple->vals[i], el);
+			}
+		} else {
+			std::ostringstream s;
+			s << "codegen: unhandled binding: ";
+			val->dump(s);
+			auto str = s.str();
+
+			std::cerr << str << std::endl << std::endl;
+			throw std::runtime_error(s.str());
+		}
+	}
+
 	llvm::Function * codegen::function(std::shared_ptr<analysis::value::function> fn, std::string name) {
 		auto scp = std::make_shared<scope>(scope_module);
 
 		auto lty_fn = llvm::cast<llvm::FunctionType>(type(fn->ty));
 		auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, name, *m);
 
-		for(size_t i = 0; i < fn->args.size(); ++i) {
-			auto arg_name = std::dynamic_pointer_cast<analysis::value::identifier>(fn->args[i]);
+		auto bb_bindings = llvm::BasicBlock::Create(*ctx, "bindings", f);
+		auto bb_entry    = llvm::BasicBlock::Create(*ctx, "entry", f);
 
-			auto arg = f->getArg((unsigned int)i);
-			arg->setName(arg_name->str);
+		llvm::IRBuilder<> builder_bindings(bb_bindings);
+		bind(scp, builder_bindings, fn->arg, f->getArg(0));
+		builder_bindings.CreateBr(bb_entry);
 
-			scp->push(arg_name->str, arg);
-		}
-
-		auto bb = llvm::BasicBlock::Create(*ctx, "entry", f);
-
-		llvm::IRBuilder<> builder(bb);
-		if(auto ret = run(scp, builder, fn->body)) {
-			builder.CreateRet(ret);
+		llvm::IRBuilder<> builder_entry(bb_entry);
+		if(auto ret = run(scp, builder_entry, fn->body)) {
+			builder_entry.CreateRet(ret);
 		} else {
-			builder.CreateRetVoid();
+			builder_entry.CreateRetVoid();
 		}
 
 		return f;
@@ -92,13 +110,16 @@ namespace etch {
 			}
 		} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 			auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn);
+
 			if(id && id->str == "+") {
-				auto lhs = run(scp, builder, call->args[0]);
-				auto rhs = run(scp, builder, call->args[1]);
+				auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg);
+				auto lhs = run(scp, builder, tuple->vals[0]);
+				auto rhs = run(scp, builder, tuple->vals[1]);
 				r = builder.CreateAdd(lhs, rhs);
 			} else if(id && id->str == "*") {
-				auto lhs = run(scp, builder, call->args[0]);
-				auto rhs = run(scp, builder, call->args[1]);
+				auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg);
+				auto lhs = run(scp, builder, tuple->vals[0]);
+				auto rhs = run(scp, builder, tuple->vals[1]);
 				r = builder.CreateMul(lhs, rhs);
 			} else {
 				auto fval = run(scp, builder, call->fn);
@@ -109,10 +130,8 @@ namespace etch {
 				}
 
 				std::vector<llvm::Value *> args;
-				for(auto &arg : call->args) {
-					if(auto v = run(scp, builder, arg)) {
-						args.emplace_back(v);
-					}
+				if(auto v = run(scp, builder, call->arg)) {
+					args.emplace_back(v);
 				}
 
 				auto fty = llvm::cast<llvm::FunctionType>(fvalty);
@@ -123,16 +142,20 @@ namespace etch {
 			}
 		} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 			auto val = run(scp, builder, def->val);
-
-			auto def_fn = std::dynamic_pointer_cast<analysis::value::function>(def->val);
-			if(!def_fn) {
-				val->setName(def->name.str);
-			}
-
-			scp->push(def->name.str, val);
+			bind(scp, builder, def->binding, val);
 
 			r = val;
 		} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
+			auto lty = type(tuple->ty);
+			llvm::Value *result = llvm::PoisonValue::get(lty);
+
+			for(size_t i = 0; i < tuple->vals.size(); ++i) {
+				auto el = run(scp, builder, tuple->vals[i]);
+				std::array<unsigned, 1> indices = {(unsigned)i};
+				result = builder.CreateInsertValue(result, el, indices);
+			}
+
+			r = result;
 		} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
 			for(auto &val : block->vals) {
 				r = run(scp, builder, val);
@@ -160,7 +183,6 @@ namespace etch {
 	llvm::Constant * codegen::run(std::shared_ptr<analysis::value::definition> def) {
 		llvm::Constant *r = nullptr;
 
-		stack.emplace_back(def->name.str);
 		auto mangled = mangle(stack);
 
 		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
@@ -195,16 +217,21 @@ namespace etch {
 			throw std::runtime_error(s.str());
 		}
 
-		stack.pop_back();
-
-		scope_module->push(def->name.str, r);
 		return r;
 	}
 
 	void codegen::run(std::shared_ptr<analysis::value::module_> am) {
 		for(auto &val : am->defs) {
 			if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
-				run(def);
+				auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->binding);
+				std::string scope_name = id ? id->str : "anon";
+
+				stack.emplace_back(scope_name);
+
+				auto r = run(def);
+
+				stack.pop_back();
+				scope_module->push(scope_name, r);
 			}
 		}
 	}

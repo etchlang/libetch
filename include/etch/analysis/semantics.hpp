@@ -57,42 +57,32 @@ namespace etch::analysis {
 		}
 
 		value::ptr visit(const syntax::function &sf) {
-			auto body = visit(sf.value);
-			auto f = std::make_shared<value::function>(body);
-			for(auto &x : sf.args) {
-				auto arg = visit(x);
-				if(!arg->ty) {
-					arg->setTy(value::type_any{});
-				}
-				f->push_arg(arg);
-			}
+			auto arg = visit(sf.arg);
+			auto body = visit(sf.body);
+			auto f = std::make_shared<value::function>(arg, body);
 			return std::static_pointer_cast<value::base>(f);
 		}
 
 		value::ptr visit(const syntax::definition &sd) {
-			std::string name(sd.name);
+			auto binding = visit(sd.binding);
 			auto val = visit(sd.value);
-			return std::static_pointer_cast<value::base>(std::make_shared<value::definition>(name, val));
+			return std::static_pointer_cast<value::base>(std::make_shared<value::definition>(binding, val));
 		}
 
 		value::ptr visit(const syntax::op &so) {
 			std::shared_ptr<value::call> c;
 
-			if(so.opname == "<-") {
-				c = std::make_shared<value::call>(visit(so.lhs));
+			auto lhs = visit(so.lhs);
+			auto rhs = visit(so.rhs);
 
-				auto rhs = visit(so.rhs);
-				if(auto t = std::dynamic_pointer_cast<value::tuple>(rhs)) {
-					for(auto &val : t->vals) {
-						c->push_arg(val);
-					}
-				} else {
-					c->push_arg(visit(so.rhs));
-				}
+			if(so.opname == "<-") {
+				c = std::make_shared<value::call>(lhs, rhs);
 			} else {
-				c = std::make_shared<value::call>(visit(so.opname));
-				c->push_arg(visit(so.lhs));
-				c->push_arg(visit(so.rhs));
+				auto t = std::make_shared<value::tuple>();
+				t->push_back(lhs);
+				t->push_back(rhs);
+
+				c = std::make_shared<value::call>(visit(so.opname), t);
 			}
 
 			return std::static_pointer_cast<value::base>(c);

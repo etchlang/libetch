@@ -31,7 +31,7 @@ namespace etch::analysis {
 			std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
 				dump_depth(s, depth);
 
-				if(depth > 5) {
+				if(depth > 8) {
 					s << "...";
 				} else {
 					dump_impl(s, depth);
@@ -86,6 +86,10 @@ namespace etch::analysis {
 
 			type_tuple() : base(type_type{}) {}
 
+			void push_back(ptr x) {
+				tys.emplace_back(x);
+			}
+
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(type_tuple";
 				if(!tys.empty()) {
@@ -104,32 +108,15 @@ namespace etch::analysis {
 		};
 
 		struct type_function : base {
-			std::vector<ptr> args;
+			ptr arg;
 			ptr body;
 
-			type_function(ptr body) : base(type_type{}), body(body) {}
-
-			void push_arg(ptr ty) {
-				args.push_back(ty);
-			}
+			type_function(ptr arg, ptr body) : base(type_type{}), arg(arg), body(body) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(type_function ";
-
-				for(auto &ty : args) {
-					if(ty) {
-						ty->dump_impl(s, depth) << ' ';
-					} else {
-						s << "???";
-					}
-				}
-
-				if(body) {
-					body->dump_impl(s, depth);
-				} else {
-					s << "???";
-				}
-
+				arg->dump_impl(s, depth) << ' ';
+				body->dump_impl(s, depth);
 				return s << ')';
 			}
 		};
@@ -178,33 +165,27 @@ namespace etch::analysis {
 
 		struct call : base {
 			ptr fn;
-			std::vector<ptr> args;
+			ptr arg;
 
-			call(ptr fn) : base(fn->ty), fn(fn) {}
-
-			void push_arg(ptr x) {
-				args.push_back(x);
-			}
+			call(ptr fn, ptr arg) : base(fn->ty), fn(fn), arg(arg) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(call" << std::endl;
 				fn->dump(s, depth + 1) << std::endl;
-				for(auto &arg : args) {
-					arg->dump(s, depth + 1) << std::endl;
-				}
+				arg->dump(s, depth + 1) << std::endl;
 				return dump_depth(s, depth) << ')';
 			}
 		};
 
 		struct definition : base {
-			identifier name;
+			ptr binding;
 			ptr val;
 
-			definition(identifier::string_type name, ptr val) : base(val->ty), name(name), val(val) {}
+			definition(ptr binding, ptr val) : base(val->ty), binding(binding), val(val) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(definition" << std::endl;
-				name.dump(s, depth + 1) << std::endl;
+				binding->dump(s, depth + 1) << std::endl;
 				val->dump(s, depth + 1) << std::endl;
 				return dump_depth(s, depth) << ')';
 			}
@@ -258,22 +239,14 @@ namespace etch::analysis {
 		};
 
 		struct function : base {
-			std::vector<ptr> args;
+			ptr arg;
 			ptr body;
 
-			function(ptr body) : base(type_function(body->ty)), body(body) {}
-
-			void push_arg(ptr x) {
-				args.push_back(x);
-				auto ty_fn = std::dynamic_pointer_cast<type_function>(ty);
-				ty_fn->push_arg(x->ty);
-			}
+			function(ptr arg, ptr body) : base(type_function(arg->ty, body->ty)), arg(arg), body(body) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(function" << std::endl;
-				for(auto &arg : args) {
-					arg->dump(s, depth + 1) << std::endl;
-				}
+				arg->dump(s, depth + 1) << std::endl;
 				body->dump(s, depth + 1) << std::endl;
 				return dump_depth(s, depth) << ')';
 			}

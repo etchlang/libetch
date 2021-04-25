@@ -14,25 +14,25 @@ namespace etch::transform {
 			} else if(std::dynamic_pointer_cast<analysis::value::intrinsic>(val)) {
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 				call->fn = run(call->fn);
-				for(auto &arg : call->args) {
-					arg = run(arg);
-				}
+				call->arg = run(call->arg);
 
 				if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn)) {
-					if(call->args.size() == 2) {
-						auto lhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[0]);
-						auto rhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[1]);
-						if(lhs && rhs) {
-							if(id->str == "+") {
-								r = std::make_shared<analysis::value::constant_integer>(lhs->val + rhs->val);
-							} else if(id->str == "*") {
-								r = std::make_shared<analysis::value::constant_integer>(lhs->val * rhs->val);
+					if(auto t = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg)) {
+						if(t->vals.size() == 2) {
+							auto lhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(t->vals[0]);
+							auto rhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(t->vals[1]);
+							if(lhs && rhs) {
+								if(id->str == "+") {
+									r = std::make_shared<analysis::value::constant_integer>(lhs->val + rhs->val);
+								} else if(id->str == "*") {
+									r = std::make_shared<analysis::value::constant_integer>(lhs->val * rhs->val);
+								}
 							}
 						}
 					}
 				} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intrinsic>(call->fn)) {
 					if(intr->str == "int") {
-						auto c = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->args[0]);
+						auto c = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->arg);
 						if(c) {
 							r = std::make_shared<analysis::value::type_int>(c->val);
 						}
@@ -76,9 +76,7 @@ namespace etch::transform {
 					r = ty->tys[0];
 				}
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
-				for(auto &arg : ty->args) {
-					arg = run(arg);
-				}
+				ty->arg = run(ty->arg);
 				ty->body = run(ty->body);
 			} else if(std::dynamic_pointer_cast<analysis::value::type_module>(val)) {
 			} else {

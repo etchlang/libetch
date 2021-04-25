@@ -40,6 +40,8 @@ namespace etch {
 	  public:
 		codegen(std::shared_ptr<llvm::LLVMContext> ctx, std::shared_ptr<llvm::Module> m) : ctx(ctx), m(m) {}
 
+		void bind(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr, llvm::Value *);
+
 		llvm::Type * type(analysis::value::ptr);
 
 		llvm::Constant * constant(std::shared_ptr<analysis::value::constant_integer>);

@@ -11,12 +11,12 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 BOOST_FUSION_ADAPT_STRUCT(
 	etch::syntax::definition,
-	name, value
+	binding, value
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
 	etch::syntax::function,
-	args, value
+	arg, body
 )
 
 BOOST_FUSION_ADAPT_STRUCT(

@@ -70,16 +70,13 @@ namespace etch::syntax {
 
 	struct unit : std::vector<module> {};
 
-	using arg = atom;
-	struct arglist : std::vector<arg> {};
-
 	struct function {
-		arglist args;
-		expr value;
+		atom arg;
+		expr body;
 	};
 
 	struct definition {
-		identifier name;
+		atom binding;
 		expr value;
 	};
 

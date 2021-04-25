@@ -16,10 +16,22 @@ namespace etch {
 		auto sm = parse(sv);
 		auto am = analysis::semantics{}.run(sm);
 
+		if(debug) {
+			std::cout << "=== semantic analysis ===" << std::endl;
+			am.dump() << std::endl;
+		}
+
 		transform::resolution{}.run(am);
+
+		if(debug) {
+			std::cout << "=== type resolution ===" << std::endl;
+			am.dump() << std::endl;
+		}
+
 		transform::fold{}.run(am);
 
 		if(debug) {
+			std::cout << "=== constant folding ===" << std::endl;
 			am.dump() << std::endl;
 		}
 

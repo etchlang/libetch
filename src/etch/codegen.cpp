@@ -9,16 +9,23 @@ namespace etch {
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
 			r = llvm::Type::getIntNTy(*ctx, (unsigned int)ty_int->width);
 		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(ty)) {
-			std::vector<llvm::Type *> lty_vals;
-			for(auto &ty : ty_tuple->tys) {
-				lty_vals.emplace_back(type(ty));
-			}
+			if(ty_tuple->tys.empty()) {
+				r = llvm::Type::getVoidTy(*ctx);
+			} else {
+				std::vector<llvm::Type *> lty_vals;
+				for(auto &ty : ty_tuple->tys) {
+					lty_vals.emplace_back(type(ty));
+				}
 
-			auto lty = llvm::StructType::get(*ctx, lty_vals);
-			r = lty;
+				r = llvm::StructType::get(*ctx, lty_vals);
+			}
 		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(ty)) {
 			std::vector<llvm::Type *> lty_args;
-			lty_args.emplace_back(type(ty_fn->arg));
+
+			auto lty_arg = type(ty_fn->arg);
+			if(!lty_arg->isVoidTy()) {
+				lty_args.emplace_back(lty_arg);
+			}
 
 			auto lty_ret = type(ty_fn->body);
 
@@ -78,14 +85,13 @@ namespace etch {
 		auto lty_fn = llvm::cast<llvm::FunctionType>(type(fn->ty));
 		auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, name, *m);
 
-		auto bb_bindings = llvm::BasicBlock::Create(*ctx, "bindings", f);
-		auto bb_entry    = llvm::BasicBlock::Create(*ctx, "entry", f);
-
-		llvm::IRBuilder<> builder_bindings(bb_bindings);
-		bind(scp, builder_bindings, fn->arg, f->getArg(0));
-		builder_bindings.CreateBr(bb_entry);
-
+		auto bb_entry = llvm::BasicBlock::Create(*ctx, "entry", f);
 		llvm::IRBuilder<> builder_entry(bb_entry);
+
+		if(lty_fn->getNumParams() == 1) {
+			bind(scp, builder_entry, fn->arg, f->getArg(0));
+		}
+
 		if(auto ret = run(scp, builder_entry, fn->body)) {
 			builder_entry.CreateRet(ret);
 		} else {
@@ -147,15 +153,17 @@ namespace etch {
 			r = val;
 		} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
 			auto lty = type(tuple->ty);
-			llvm::Value *result = llvm::PoisonValue::get(lty);
+			if(!lty->isVoidTy()) {
+				llvm::Value *result = llvm::PoisonValue::get(lty);
 
-			for(size_t i = 0; i < tuple->vals.size(); ++i) {
-				auto el = run(scp, builder, tuple->vals[i]);
-				std::array<unsigned, 1> indices = {(unsigned)i};
-				result = builder.CreateInsertValue(result, el, indices);
+				for(size_t i = 0; i < tuple->vals.size(); ++i) {
+					auto el = run(scp, builder, tuple->vals[i]);
+					std::array<unsigned, 1> indices = {(unsigned)i};
+					result = builder.CreateInsertValue(result, el, indices);
+				}
+
+				r = result;
 			}
-
-			r = result;
 		} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
 			for(auto &val : block->vals) {
 				r = run(scp, builder, val);

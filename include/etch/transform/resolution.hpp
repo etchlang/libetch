@@ -48,7 +48,6 @@ namespace etch::transform {
 			if(std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
 			} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
 				if(auto find = lookup(id->str)) {
-					find->dump() << std::endl;
 					auto fty = std::dynamic_pointer_cast<analysis::value::type_function>(find->ty);
 
 					if(std::dynamic_pointer_cast<analysis::value::type_type>(find->ty)) {

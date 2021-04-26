@@ -41,12 +41,20 @@ namespace etch::transform {
 			} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
 				def->val = run(def->val);
 			} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
+				auto result = std::make_shared<analysis::value::tuple>();
+
 				for(auto &val : tuple->vals) {
-					val = run(val);
+					auto new_val = run(val);
+					auto new_tuple = std::dynamic_pointer_cast<analysis::value::tuple>(new_val);
+					if(!new_tuple || new_tuple->vals.size() > 0) {
+						result->push_back(new_val);
+					}
 				}
 
-				if(tuple->vals.size() == 1) {
-					r = tuple->vals[0];
+				if(result->vals.size() == 1) {
+					r = result->vals[0];
+				} else {
+					r = result;
 				}
 			} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
 				for(auto &val : block->vals) {
@@ -57,6 +65,7 @@ namespace etch::transform {
 					r = block->vals[0];
 				}
 			} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(val)) {
+				fn->arg = run(fn->arg);
 				fn->body = run(fn->body);
 			} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(val)) {
 				for(auto &def : m->defs) {
@@ -68,12 +77,20 @@ namespace etch::transform {
 			} else if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_tuple>(val)) {
+				auto result = std::make_shared<analysis::value::type_tuple>();
+
 				for(auto &ty_inner : ty->tys) {
-					ty_inner = run(ty_inner);
+					auto new_ty = run(ty_inner);
+					auto new_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(new_ty);
+					if(!new_tuple || new_tuple->tys.size() > 0) {
+						result->push_back(new_ty);
+					}
 				}
 
-				if(ty->tys.size() == 1) {
-					r = ty->tys[0];
+				if(result->tys.size() == 1) {
+					r = result->tys[0];
+				} else {
+					r = result;
 				}
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
 				ty->arg = run(ty->arg);

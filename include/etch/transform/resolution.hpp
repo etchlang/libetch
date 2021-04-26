@@ -19,23 +19,27 @@ namespace etch::transform {
 			return nullptr;
 		}
 
-		void bind(analysis::value::ptr val) {
-			if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
+		void bind(analysis::value::ptr binding, analysis::value::ptr val) {
+			if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(binding)) {
 				id->ty = std::make_shared<analysis::value::type_int>(32);
-				stack.back().syms.emplace(id->str, id);
-			} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
+				stack.back().syms.emplace(id->str, val);
+			} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(binding)) {
 				for(auto &val : tuple->vals) {
 					bind(val);
 				}
 			} else {
 				std::ostringstream s;
 				s << "analysis::resolution: unhandled binding: ";
-				val->dump(s);
+				binding->dump(s);
 				auto str = s.str();
 
 				std::cerr << str << std::endl << std::endl;
 				throw std::runtime_error(s.str());
 			}
+		}
+
+		void bind(analysis::value::ptr binding) {
+			return bind(binding, binding);
 		}
 
 		analysis::value::ptr run(analysis::value::ptr val) {
@@ -44,14 +48,16 @@ namespace etch::transform {
 			if(std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
 			} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
 				if(auto find = lookup(id->str)) {
+					find->dump() << std::endl;
 					auto fty = std::dynamic_pointer_cast<analysis::value::type_function>(find->ty);
 
 					if(std::dynamic_pointer_cast<analysis::value::type_type>(find->ty)) {
 						r = find;
 					} else if(fty && std::dynamic_pointer_cast<analysis::value::type_type>(fty->body)) {
 						r = find;
+					} else {
+						r->ty = find->ty;
 					}
-					val->ty = find->ty;
 				} else if(id->str == "+" || id->str == "*") {
 					auto ity = std::make_shared<analysis::value::type_int>(32);
 
@@ -78,11 +84,11 @@ namespace etch::transform {
 					call->ty = fty->body;
 				}
 			} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
-				bind(def->binding);
-
 				def->val = run(def->val);
+				bind(def->binding, def->val);
+
 				def->binding->ty = def->val->ty;
-				def->ty      = def->val->ty;
+				def->ty          = def->val->ty;
 			} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
 				for(auto &val : tuple->vals) {
 					val = run(val);
@@ -92,7 +98,7 @@ namespace etch::transform {
 				for(auto &val : tuple->vals) {
 					tty->push_back(val->ty);
 				}
-				val->ty = tty;
+				r->ty = tty;
 			} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
 				stack.emplace_back(scope{});
 
@@ -148,7 +154,7 @@ namespace etch::transform {
 				throw std::runtime_error(s.str());
 			}
 
-			val->ty = run(val->ty);
+			r->ty = run(r->ty);
 
 			if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(r->ty)) {
 				std::ostringstream s;

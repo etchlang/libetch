@@ -85,7 +85,6 @@ namespace etch::transform {
 				return r;
 			} else if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
-			} else if(std::dynamic_pointer_cast<analysis::value::type_module>(val)) {
 			} else {
 				std::ostringstream s;
 				s << "analysis::fold: unhandled value: ";

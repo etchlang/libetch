@@ -98,16 +98,6 @@ namespace etch::analysis {
 			}
 		};
 
-		struct type_module : base {
-			ptr type() const {
-				return std::make_shared<type_type>();
-			}
-
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(type_module)";
-			}
-		};
-
 		struct constant_int : base {
 			int32_t val;
 			size_t width;
@@ -264,7 +254,7 @@ namespace etch::analysis {
 			std::vector<ptr> defs;
 
 			ptr type() const {
-				return std::make_shared<type_module>();
+				return std::make_shared<type_type>();
 			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {

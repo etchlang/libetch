@@ -12,23 +12,14 @@ namespace etch::analysis {
 
 		class base {
 		  public:
-			ptr ty;
-
-			base(ptr ty) : ty(ty) {}
-			base(nullptr_t) {}
-			template<typename T> base(T ty) { setTy(ty); }
-
-			template<typename T>
-			ptr setTy(T newTy) {
-				return ty = std::static_pointer_cast<base>(std::make_shared<T>(newTy));
-			}
+			virtual ptr type() const = 0;
 
 			static std::ostream & dump_depth(std::ostream &s, size_t depth) {
 				for(size_t i = 0; i < depth; ++i) { s << "| "; }
 				return s;
 			}
 
-			std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
+			std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) {
 				dump_depth(s, depth);
 
 				if(depth > 8) {
@@ -37,18 +28,36 @@ namespace etch::analysis {
 					dump_impl(s, depth);
 				}
 
-				if(ty) {
-					s << " :: ";
-					ty->dump_impl(s, depth);
-				}
+				s << " :: ";
+				type()->dump_impl(s, depth);
+
 				return s;
 			}
 
 			virtual std::ostream & dump_impl(std::ostream &s, size_t depth) const = 0;
 		};
 
+		struct cast : base {
+			ptr ty;
+			ptr val;
+
+			cast(ptr val, ptr ty) : val(val), ty(ty) {}
+
+			ptr type() const {
+				return ty;
+			}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(cast ";
+				val->dump_impl(s, depth);
+				return s << ')';
+			}
+		};
+
 		struct type_type : base {
-			type_type() : base(nullptr) {}
+			ptr type() const {
+				return std::make_shared<type_type>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(type_type)";
@@ -56,7 +65,9 @@ namespace etch::analysis {
 		};
 
 		struct type_unresolved : base {
-			type_unresolved() : base(type_type{}) {}
+			ptr type() const {
+				return std::make_shared<type_type>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(type_unresolved)";
@@ -64,7 +75,9 @@ namespace etch::analysis {
 		};
 
 		struct type_any : base {
-			type_any() : base(type_type{}) {}
+			ptr type() const {
+				return std::make_shared<type_type>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(type_any)";
@@ -74,7 +87,11 @@ namespace etch::analysis {
 		struct type_int : base {
 			size_t width;
 
-			type_int(size_t width) : base(type_type{}), width(width) {}
+			type_int(size_t width) : width(width) {}
+
+			ptr type() const {
+				return std::make_shared<type_type>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(type_int " << width << ')';
@@ -84,7 +101,13 @@ namespace etch::analysis {
 		struct type_tuple : base {
 			std::vector<ptr> tys;
 
-			type_tuple() : base(type_type{}) {}
+			ptr type() const {
+				auto r = std::make_shared<type_tuple>();
+				for(auto &ty : tys) {
+					r->push_back(ty->type());
+				}
+				return r;
+			}
 
 			void push_back(ptr x) {
 				tys.emplace_back(x);
@@ -95,11 +118,7 @@ namespace etch::analysis {
 				if(!tys.empty()) {
 					s << std::endl;
 					for(auto &ty : tys) {
-						if(ty) {
-							ty->dump(s, depth + 4) << std::endl;
-						} else {
-							dump_depth(s, depth + 4) << "???" << std::endl;
-						}
+						ty->dump(s, depth + 4) << std::endl;
 					}
 					dump_depth(s, depth);
 				}
@@ -111,7 +130,11 @@ namespace etch::analysis {
 			ptr arg;
 			ptr body;
 
-			type_function(ptr arg, ptr body) : base(type_type{}), arg(arg), body(body) {}
+			type_function(ptr arg, ptr body) : arg(arg), body(body) {}
+
+			ptr type() const {
+				return std::make_shared<type_function>(arg->type(), body->type());
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(type_function ";
@@ -122,29 +145,83 @@ namespace etch::analysis {
 		};
 
 		struct type_module : base {
-			type_module() : base(type_type{}) {}
+			ptr type() const {
+				return std::make_shared<type_type>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(type_module)";
 			}
 		};
 
-		struct constant_integer : base {
-			int32_t val;
-
-			constant_integer(int32_t val) : base(type_int{32}), val(val) {}
+		struct intr_int : base {
+			ptr type() const {
+				auto tyty = std::make_shared<analysis::value::type_type>();
+				auto ity = std::make_shared<analysis::value::type_int>(32);
+				return std::make_shared<analysis::value::type_function>(ity, tyty);
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(constant_integer " << val << ')';
+				return s << "(intr_int)";
+			}
+		};
+
+		struct intr_binop : base {
+			ptr type() const {
+				auto ity = std::make_shared<analysis::value::type_int>(32);
+
+				auto tty = std::make_shared<analysis::value::type_tuple>();
+				tty->push_back(ity);
+				tty->push_back(ity);
+
+				return std::make_shared<analysis::value::type_function>(tty, ity);
+			}
+		};
+
+		struct intr_add : intr_binop {
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(intr_add)";
+			}
+		};
+
+		struct intr_mul : intr_binop {
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(intr_mul)";
+			}
+		};
+
+		struct constant_int : base {
+			int32_t val;
+			size_t width;
+
+			constant_int(int32_t val, size_t width = 32) : val(val), width(width) {}
+
+			ptr type() const {
+				return std::make_shared<type_int>(width);
+			}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(constant_int " << val << ')';
 			}
 		};
 
 		struct identifier : base {
+		  private:
+			ptr resolved;
+		  public:
 			using string_type = std::string;
 
 			string_type str;
 
-			identifier(string_type str = "") : base(type_unresolved{}), str(str) {}
+			identifier(string_type str = "") : str(str) {}
+
+			ptr type() const {
+				return resolved ? resolved : std::make_shared<type_unresolved>();
+			}
+
+			void resolve(ptr ty) {
+				resolved = ty;
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(identifier " << str << ')';
@@ -156,7 +233,11 @@ namespace etch::analysis {
 
 			string_type str;
 
-			intrinsic(string_type str) : base(type_unresolved{}), str(str) {}
+			intrinsic(string_type str) : str(str) {}
+
+			ptr type() const {
+				return std::make_shared<type_unresolved>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(intrinsic " << str << ')';
@@ -167,7 +248,15 @@ namespace etch::analysis {
 			ptr fn;
 			ptr arg;
 
-			call(ptr fn, ptr arg) : base(fn->ty), fn(fn), arg(arg) {}
+			call(ptr fn, ptr arg) : fn(fn), arg(arg) {}
+
+			ptr type() const {
+				if(auto fty = std::dynamic_pointer_cast<type_function>(fn->type())) {
+					return fty->body;
+				} else {
+					return std::make_shared<type_unresolved>();
+				}
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(call" << std::endl;
@@ -181,7 +270,11 @@ namespace etch::analysis {
 			ptr binding;
 			ptr val;
 
-			definition(ptr binding, ptr val) : base(val->ty), binding(binding), val(val) {}
+			ptr type() const {
+				return val->type();
+			}
+
+			definition(ptr binding, ptr val) : binding(binding), val(val) {}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(definition" << std::endl;
@@ -194,12 +287,16 @@ namespace etch::analysis {
 		struct tuple : base {
 			std::vector<ptr> vals;
 
-			tuple() : base(type_tuple{}) {}
+			ptr type() const {
+				auto r = std::make_shared<type_tuple>();
+				for(auto &val : vals) {
+					r->push_back(val->type());
+				}
+				return r;
+			}
 
 			void push_back(ptr x) {
 				vals.push_back(x);
-				auto ty_tuple = std::dynamic_pointer_cast<type_tuple>(ty);
-				ty_tuple->tys.push_back(x->ty);
 			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -218,11 +315,16 @@ namespace etch::analysis {
 		struct block : base {
 			std::vector<ptr> vals;
 
-			block() : base(type_tuple{}) {}
+			ptr type() const {
+				if(vals.empty()) {
+					return std::make_shared<type_tuple>();
+				} else {
+					return vals.back()->type();
+				}
+			}
 
 			void push_back(ptr x) {
 				vals.push_back(x);
-				ty = x->ty;
 			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -242,7 +344,11 @@ namespace etch::analysis {
 			ptr arg;
 			ptr body;
 
-			function(ptr arg, ptr body) : base(type_function(arg->ty, body->ty)), arg(arg), body(body) {}
+			function(ptr arg, ptr body) : arg(arg), body(body) {}
+
+			ptr type() const {
+				return std::make_shared<type_function>(arg->type(), body->type());
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(function" << std::endl;
@@ -255,7 +361,9 @@ namespace etch::analysis {
 		struct module_ : base {
 			std::vector<ptr> defs;
 
-			module_() : base(type_module{}) {}
+			ptr type() const {
+				return std::make_shared<type_module>();
+			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(module" << std::endl;

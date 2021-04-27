@@ -42,14 +42,12 @@ namespace etch {
 
 		void bind(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr, llvm::Value *);
 
-		llvm::Type * type(analysis::value::ptr);
+		llvm::Type     * type(analysis::value::ptr);
+		llvm::Constant * constant(analysis::value::ptr);
+		llvm::Function * function(std::string, std::shared_ptr<analysis::value::function>);
+		llvm::Value    * local(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr);
+		llvm::Constant * global(analysis::value::ptr);
 
-		llvm::Constant * constant(std::shared_ptr<analysis::value::constant_integer>);
-
-		llvm::Function * codegen::function(std::shared_ptr<analysis::value::function>, std::string);
-
-		llvm::Value * run(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr);
-		llvm::Constant * run(std::shared_ptr<analysis::value::definition>);
 		void run(std::shared_ptr<analysis::value::module_>);
 		void run(const analysis::unit &);
 	};

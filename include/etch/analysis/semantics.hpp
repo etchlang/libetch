@@ -11,9 +11,9 @@ namespace etch::analysis {
 	  public:
 		template<typename T>
 		value::ptr visit(const syntax::typed<T> &x) {
-			auto v = visit(x.value);
-			v->ty = visit(x.type);
-			return v;
+			auto val = visit(x.value);
+			auto ty  = visit(x.type);
+			return std::make_shared<value::cast>(val, ty);
 		}
 
 		template<typename T>
@@ -53,7 +53,7 @@ namespace etch::analysis {
 		}
 
 		value::ptr visit(const syntax::integer &i) {
-			return std::static_pointer_cast<value::base>(std::make_shared<value::constant_integer>(i.value));
+			return std::static_pointer_cast<value::base>(std::make_shared<value::constant_int>(i.value));
 		}
 
 		value::ptr visit(const syntax::function &sf) {

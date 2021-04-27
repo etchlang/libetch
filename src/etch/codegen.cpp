@@ -47,13 +47,17 @@ namespace etch {
 		return r;
 	}
 
-	llvm::Constant * codegen::constant(std::shared_ptr<analysis::value::constant_integer> val) {
+	llvm::Constant * codegen::constant(analysis::value::ptr val) {
 		llvm::Constant *r = nullptr;
 
-		auto lty = type(val->ty);
-		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(val->ty)) {
-			llvm::APInt ap((unsigned int)ty_int->width, val->val);
-			r = llvm::Constant::getIntegerValue(lty, ap);
+		auto ty = val->type();
+		auto lty = type(ty);
+
+		if(auto val_int = std::dynamic_pointer_cast<analysis::value::constant_int>(val)) {
+			if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
+				llvm::APInt ap((unsigned int)ty_int->width, val_int->val);
+				r = llvm::Constant::getIntegerValue(lty, ap);
+			}
 		}
 
 		return r;
@@ -79,10 +83,11 @@ namespace etch {
 		}
 	}
 
-	llvm::Function * codegen::function(std::shared_ptr<analysis::value::function> fn, std::string name) {
+	llvm::Function * codegen::function(std::string name, std::shared_ptr<analysis::value::function> fn) {
 		auto scp = std::make_shared<scope>(scope_module);
 
-		auto lty_fn = llvm::cast<llvm::FunctionType>(type(fn->ty));
+		auto ty = fn->type();
+		auto lty_fn = llvm::cast<llvm::FunctionType>(type(ty));
 		auto f = llvm::Function::Create(lty_fn, llvm::Function::ExternalLinkage, name, *m);
 
 		auto bb_entry = llvm::BasicBlock::Create(*ctx, "entry", f);
@@ -92,7 +97,7 @@ namespace etch {
 			bind(scp, builder_entry, fn->arg, f->getArg(0));
 		}
 
-		if(auto ret = run(scp, builder_entry, fn->body)) {
+		if(auto ret = local(scp, builder_entry, fn->body)) {
 			builder_entry.CreateRet(ret);
 		} else {
 			builder_entry.CreateRetVoid();
@@ -101,10 +106,10 @@ namespace etch {
 		return f;
 	}
 
-	llvm::Value * codegen::run(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, analysis::value::ptr val) {
+	llvm::Value * codegen::local(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, analysis::value::ptr val) {
 		llvm::Value *r = nullptr;
 
-		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
+		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_int>(val)) {
 			r = constant(i);
 		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
 			auto sym = scp->find(id->str);
@@ -115,20 +120,18 @@ namespace etch {
 				r = sym;
 			}
 		} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
-			auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn);
-
-			if(id && id->str == "+") {
+			if(std::dynamic_pointer_cast<analysis::value::intr_add>(call->fn)) {
 				auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg);
-				auto lhs = run(scp, builder, tuple->vals[0]);
-				auto rhs = run(scp, builder, tuple->vals[1]);
+				auto lhs = local(scp, builder, tuple->vals[0]);
+				auto rhs = local(scp, builder, tuple->vals[1]);
 				r = builder.CreateAdd(lhs, rhs);
-			} else if(id && id->str == "*") {
+			} else if(std::dynamic_pointer_cast<analysis::value::intr_mul>(call->fn)) {
 				auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg);
-				auto lhs = run(scp, builder, tuple->vals[0]);
-				auto rhs = run(scp, builder, tuple->vals[1]);
+				auto lhs = local(scp, builder, tuple->vals[0]);
+				auto rhs = local(scp, builder, tuple->vals[1]);
 				r = builder.CreateMul(lhs, rhs);
 			} else {
-				auto fval = run(scp, builder, call->fn);
+				auto fval = local(scp, builder, call->fn);
 				auto fvalty = fval->getType();
 
 				if(fvalty->isPointerTy()) {
@@ -136,7 +139,7 @@ namespace etch {
 				}
 
 				std::vector<llvm::Value *> args;
-				if(auto v = run(scp, builder, call->arg)) {
+				if(auto v = local(scp, builder, call->arg)) {
 					args.emplace_back(v);
 				}
 
@@ -147,17 +150,17 @@ namespace etch {
 				}
 			}
 		} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
-			auto val = run(scp, builder, def->val);
+			auto val = local(scp, builder, def->val);
 			bind(scp, builder, def->binding, val);
 
 			r = val;
 		} else if(auto tuple = std::dynamic_pointer_cast<analysis::value::tuple>(val)) {
-			auto lty = type(tuple->ty);
+			auto lty = type(tuple->type());
 			if(!lty->isVoidTy()) {
 				llvm::Value *result = llvm::PoisonValue::get(lty);
 
 				for(size_t i = 0; i < tuple->vals.size(); ++i) {
-					auto el = run(scp, builder, tuple->vals[i]);
+					auto el = local(scp, builder, tuple->vals[i]);
 					std::array<unsigned, 1> indices = {(unsigned)i};
 					result = builder.CreateInsertValue(result, el, indices);
 				}
@@ -166,15 +169,14 @@ namespace etch {
 			}
 		} else if(auto block = std::dynamic_pointer_cast<analysis::value::block>(val)) {
 			for(auto &val : block->vals) {
-				r = run(scp, builder, val);
+				r = local(scp, builder, val);
 			}
 		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(val)) {
 			stack.emplace_back("anon");
 			auto mangled = mangle(stack);
 			stack.pop_back();
 
-			r = function(fn, mangled);
-
+			r = function(mangled, fn);
 		} else {
 			std::ostringstream s;
 			s << "codegen: unhandled value: ";
@@ -188,37 +190,30 @@ namespace etch {
 		return r;
 	}
 
-	llvm::Constant * codegen::run(std::shared_ptr<analysis::value::definition> def) {
+	llvm::Constant * codegen::global(analysis::value::ptr val) {
 		llvm::Constant *r = nullptr;
+
+		auto ty = val->type();
 
 		auto mangled = mangle(stack);
 
-		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_integer>(def->val)) {
+		if(auto i = std::dynamic_pointer_cast<analysis::value::constant_int>(val)) {
 			auto c = constant(i);
 			r = new llvm::GlobalVariable(*m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, mangled);
-		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(def->val)) {
+		} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
 			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
 			r = llvm::GlobalAlias::create(mangled, gv);
-		} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intrinsic>(def->val)) {
-			if(intr->str == "int") {
-			} else {
-				std::ostringstream s;
-				s << "codegen: unhandled global intrinsic: ";
-				def->val->dump(s);
-				auto str = s.str();
-
-				std::cerr << str << std::endl << std::endl;
-				throw std::runtime_error(s.str());
-			}
-		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(def->val)) {
-			r = function(fn, mangled);
-		} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(def->val)) {
+		} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
+			r = global(def->val);
+		} else if(auto fn = std::dynamic_pointer_cast<analysis::value::function>(val)) {
+			r = function(mangled, fn);
+		} else if(auto m = std::dynamic_pointer_cast<analysis::value::module_>(val)) {
 			run(m);
-		} else if(std::dynamic_pointer_cast<analysis::value::type_int>(def->val)) {
+		} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
 		} else {
 			std::ostringstream s;
 			s << "codegen: unhandled global: ";
-			def->val->dump(s);
+			val->dump(s);
 			auto str = s.str();
 
 			std::cerr << str << std::endl << std::endl;
@@ -236,7 +231,7 @@ namespace etch {
 
 				stack.emplace_back(scope_name);
 
-				auto r = run(def);
+				auto r = global(def);
 
 				stack.pop_back();
 				scope_module->push(scope_name, r);

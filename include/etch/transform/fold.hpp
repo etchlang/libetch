@@ -9,33 +9,31 @@ namespace etch::transform {
 
 			auto r = val;
 
-			if(std::dynamic_pointer_cast<analysis::value::constant_integer>(val)) {
+			if(std::dynamic_pointer_cast<analysis::value::constant_int>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::intrinsic>(val)) {
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 				call->fn = run(call->fn);
 				call->arg = run(call->arg);
 
-				if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(call->fn)) {
-					if(auto t = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg)) {
-						if(t->vals.size() == 2) {
-							auto lhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(t->vals[0]);
-							auto rhs = std::dynamic_pointer_cast<analysis::value::constant_integer>(t->vals[1]);
-							if(lhs && rhs) {
-								if(id->str == "+") {
-									r = std::make_shared<analysis::value::constant_integer>(lhs->val + rhs->val);
-								} else if(id->str == "*") {
-									r = std::make_shared<analysis::value::constant_integer>(lhs->val * rhs->val);
-								}
-							}
-						}
+				auto t = std::dynamic_pointer_cast<analysis::value::tuple>(call->arg);
+
+				if(auto intr = std::dynamic_pointer_cast<analysis::value::intr_int>(call->fn)) {
+					auto c = std::dynamic_pointer_cast<analysis::value::constant_int>(call->arg);
+					if(c) {
+						r = std::make_shared<analysis::value::type_int>(c->val);
 					}
-				} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intrinsic>(call->fn)) {
-					if(intr->str == "int") {
-						auto c = std::dynamic_pointer_cast<analysis::value::constant_integer>(call->arg);
-						if(c) {
-							r = std::make_shared<analysis::value::type_int>(c->val);
-						}
+				} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intr_add>(call->fn)) {
+					auto lhs = std::dynamic_pointer_cast<analysis::value::constant_int>(t->vals[0]);
+					auto rhs = std::dynamic_pointer_cast<analysis::value::constant_int>(t->vals[1]);
+					if(lhs && rhs) {
+						r = std::make_shared<analysis::value::constant_int>(lhs->val + rhs->val);
+					}
+				} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intr_mul>(call->fn)) {
+					auto lhs = std::dynamic_pointer_cast<analysis::value::constant_int>(t->vals[0]);
+					auto rhs = std::dynamic_pointer_cast<analysis::value::constant_int>(t->vals[1]);
+					if(lhs && rhs) {
+						r = std::make_shared<analysis::value::constant_int>(lhs->val * rhs->val);
 					}
 				}
 			} else if(auto def = std::dynamic_pointer_cast<analysis::value::definition>(val)) {
@@ -71,8 +69,20 @@ namespace etch::transform {
 				for(auto &def : m->defs) {
 					def = run(def);
 				}
+			} else if(std::dynamic_pointer_cast<analysis::value::intr_int>(val)) {
+			} else if(std::dynamic_pointer_cast<analysis::value::intr_add>(val)) {
+			} else if(std::dynamic_pointer_cast<analysis::value::intr_mul>(val)) {
+			} else if(auto cast = std::dynamic_pointer_cast<analysis::value::cast>(val)) {
+				cast->ty  = run(cast->ty);
+				cast->val = run(cast->val);
+
+				if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(cast->ty)) {
+					if(auto val_int = std::dynamic_pointer_cast<analysis::value::constant_int>(cast->val)) {
+						r = std::make_shared<analysis::value::constant_int>(val_int->val, ty_int->width);
+					}
+				}
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_type>(val)) {
-				// bail to avoid recursing with null type
+				// bail to avoid infinite loop
 				return r;
 			} else if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
@@ -105,8 +115,6 @@ namespace etch::transform {
 				std::cerr << str << std::endl << std::endl;
 				throw std::runtime_error(s.str());
 			}
-
-			val->ty = run(val->ty);
 
 			return r;
 		}

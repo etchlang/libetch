@@ -86,22 +86,6 @@ namespace etch::transform {
 				return r;
 			} else if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
-			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_tuple>(val)) {
-				auto result = std::make_shared<analysis::value::type_tuple>();
-
-				for(auto &ty_inner : ty->tys) {
-					auto new_ty = run(ty_inner);
-					auto new_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(new_ty);
-					if(!new_tuple || new_tuple->tys.size() > 0) {
-						result->push_back(new_ty);
-					}
-				}
-
-				if(result->tys.size() == 1) {
-					r = result->tys[0];
-				} else {
-					r = result;
-				}
 			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
 				ty->arg = run(ty->arg);
 				ty->body = run(ty->body);

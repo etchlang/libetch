@@ -8,12 +8,12 @@ namespace etch {
 
 		if(auto ty_int = std::dynamic_pointer_cast<analysis::value::type_int>(ty)) {
 			r = llvm::Type::getIntNTy(*ctx, (unsigned int)ty_int->width);
-		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::type_tuple>(ty)) {
-			if(ty_tuple->tys.empty()) {
+		} else if(auto ty_tuple = std::dynamic_pointer_cast<analysis::value::tuple>(ty)) {
+			if(ty_tuple->vals.empty()) {
 				r = llvm::Type::getVoidTy(*ctx);
 			} else {
 				std::vector<llvm::Type *> lty_vals;
-				for(auto &ty : ty_tuple->tys) {
+				for(auto &ty : ty_tuple->vals) {
 					lty_vals.emplace_back(type(ty));
 				}
 

@@ -98,34 +98,6 @@ namespace etch::analysis {
 			}
 		};
 
-		struct type_tuple : base {
-			std::vector<ptr> tys;
-
-			ptr type() const {
-				auto r = std::make_shared<type_tuple>();
-				for(auto &ty : tys) {
-					r->push_back(ty->type());
-				}
-				return r;
-			}
-
-			void push_back(ptr x) {
-				tys.emplace_back(x);
-			}
-
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(type_tuple";
-				if(!tys.empty()) {
-					s << std::endl;
-					for(auto &ty : tys) {
-						ty->dump(s, depth + 4) << std::endl;
-					}
-					dump_depth(s, depth);
-				}
-				return s << ')';
-			}
-		};
-
 		struct type_function : base {
 			ptr arg;
 			ptr body;
@@ -151,42 +123,6 @@ namespace etch::analysis {
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(type_module)";
-			}
-		};
-
-		struct intr_int : base {
-			ptr type() const {
-				auto tyty = std::make_shared<analysis::value::type_type>();
-				auto ity = std::make_shared<analysis::value::type_int>(32);
-				return std::make_shared<analysis::value::type_function>(ity, tyty);
-			}
-
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(intr_int)";
-			}
-		};
-
-		struct intr_binop : base {
-			ptr type() const {
-				auto ity = std::make_shared<analysis::value::type_int>(32);
-
-				auto tty = std::make_shared<analysis::value::type_tuple>();
-				tty->push_back(ity);
-				tty->push_back(ity);
-
-				return std::make_shared<analysis::value::type_function>(tty, ity);
-			}
-		};
-
-		struct intr_add : intr_binop {
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(intr_add)";
-			}
-		};
-
-		struct intr_mul : intr_binop {
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(intr_mul)";
 			}
 		};
 
@@ -288,7 +224,7 @@ namespace etch::analysis {
 			std::vector<ptr> vals;
 
 			ptr type() const {
-				auto r = std::make_shared<type_tuple>();
+				auto r = std::make_shared<tuple>();
 				for(auto &val : vals) {
 					r->push_back(val->type());
 				}
@@ -317,7 +253,7 @@ namespace etch::analysis {
 
 			ptr type() const {
 				if(vals.empty()) {
-					return std::make_shared<type_tuple>();
+					return std::make_shared<tuple>();
 				} else {
 					return vals.back()->type();
 				}
@@ -371,6 +307,42 @@ namespace etch::analysis {
 					def->dump(s, depth + 1) << std::endl;
 				}
 				return dump_depth(s, depth) << ')';
+			}
+		};
+
+		struct intr_int : base {
+			ptr type() const {
+				auto tyty = std::make_shared<type_type>();
+				auto ity = std::make_shared<type_int>(32);
+				return std::make_shared<type_function>(ity, tyty);
+			}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(intr_int)";
+			}
+		};
+
+		struct intr_binop : base {
+			ptr type() const {
+				auto ity = std::make_shared<type_int>(32);
+
+				auto tty = std::make_shared<tuple>();
+				tty->push_back(ity);
+				tty->push_back(ity);
+
+				return std::make_shared<type_function>(tty, ity);
+			}
+		};
+
+		struct intr_add : intr_binop {
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(intr_add)";
+			}
+		};
+
+		struct intr_mul : intr_binop {
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				return s << "(intr_mul)";
 			}
 		};
 	} // namspace value

@@ -49,7 +49,7 @@ namespace etch::transform {
 			} else if(auto id = std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
 				if(auto find = lookup(id->str)) {
 					auto find_ty = find->type();
-					auto fty = std::dynamic_pointer_cast<analysis::value::type_function>(find->type());
+					auto fty = std::dynamic_pointer_cast<analysis::value::function>(find->type());
 
 					if(std::dynamic_pointer_cast<analysis::value::type_type>(find_ty)) {
 						r = find;
@@ -109,9 +109,6 @@ namespace etch::transform {
 				return r;
 			} else if(std::dynamic_pointer_cast<analysis::value::type_unresolved>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::type_int>(val)) {
-			} else if(auto ty = std::dynamic_pointer_cast<analysis::value::type_function>(val)) {
-				ty->arg = run(ty->arg);
-				ty->body = run(ty->body);
 			} else if(std::dynamic_pointer_cast<analysis::value::type_module>(val)) {
 			} else {
 				std::ostringstream s;

@@ -19,7 +19,7 @@ namespace etch {
 
 				r = llvm::StructType::get(*ctx, lty_vals);
 			}
-		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::type_function>(ty)) {
+		} else if(auto ty_fn = std::dynamic_pointer_cast<analysis::value::function>(ty)) {
 			std::vector<llvm::Type *> lty_args;
 
 			auto lty_arg = type(ty_fn->arg);

@@ -98,24 +98,6 @@ namespace etch::analysis {
 			}
 		};
 
-		struct type_function : base {
-			ptr arg;
-			ptr body;
-
-			type_function(ptr arg, ptr body) : arg(arg), body(body) {}
-
-			ptr type() const {
-				return std::make_shared<type_function>(arg->type(), body->type());
-			}
-
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(type_function ";
-				arg->dump_impl(s, depth) << ' ';
-				body->dump_impl(s, depth);
-				return s << ')';
-			}
-		};
-
 		struct type_module : base {
 			ptr type() const {
 				return std::make_shared<type_type>();
@@ -177,28 +159,6 @@ namespace etch::analysis {
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				return s << "(intrinsic " << str << ')';
-			}
-		};
-
-		struct call : base {
-			ptr fn;
-			ptr arg;
-
-			call(ptr fn, ptr arg) : fn(fn), arg(arg) {}
-
-			ptr type() const {
-				if(auto fty = std::dynamic_pointer_cast<type_function>(fn->type())) {
-					return fty->body;
-				} else {
-					return std::make_shared<type_unresolved>();
-				}
-			}
-
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				s << "(call" << std::endl;
-				fn->dump(s, depth + 1) << std::endl;
-				arg->dump(s, depth + 1) << std::endl;
-				return dump_depth(s, depth) << ')';
 			}
 		};
 
@@ -283,13 +243,35 @@ namespace etch::analysis {
 			function(ptr arg, ptr body) : arg(arg), body(body) {}
 
 			ptr type() const {
-				return std::make_shared<type_function>(arg->type(), body->type());
+				return std::make_shared<function>(arg->type(), body->type());
 			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 				s << "(function" << std::endl;
 				arg->dump(s, depth + 1) << std::endl;
 				body->dump(s, depth + 1) << std::endl;
+				return dump_depth(s, depth) << ')';
+			}
+		};
+
+		struct call : base {
+			ptr fn;
+			ptr arg;
+
+			call(ptr fn, ptr arg) : fn(fn), arg(arg) {}
+
+			ptr type() const {
+				if(auto fty = std::dynamic_pointer_cast<function>(fn->type())) {
+					return fty->body;
+				} else {
+					return std::make_shared<type_unresolved>();
+				}
+			}
+
+			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
+				s << "(call" << std::endl;
+				fn->dump(s, depth + 1) << std::endl;
+				arg->dump(s, depth + 1) << std::endl;
 				return dump_depth(s, depth) << ')';
 			}
 		};
@@ -314,7 +296,7 @@ namespace etch::analysis {
 			ptr type() const {
 				auto tyty = std::make_shared<type_type>();
 				auto ity = std::make_shared<type_int>(32);
-				return std::make_shared<type_function>(ity, tyty);
+				return std::make_shared<function>(ity, tyty);
 			}
 
 			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
@@ -330,7 +312,7 @@ namespace etch::analysis {
 				tty->push_back(ity);
 				tty->push_back(ity);
 
-				return std::make_shared<type_function>(tty, ity);
+				return std::make_shared<function>(tty, ity);
 			}
 		};
 

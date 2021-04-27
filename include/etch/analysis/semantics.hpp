@@ -4,6 +4,7 @@
 #include <etch/analysis/types.hpp>
 #include <etch/syntax/types.hpp>
 #include <optional>
+#include <sstream>
 #include <string>
 
 namespace etch::analysis {
@@ -49,7 +50,20 @@ namespace etch::analysis {
 		}
 
 		auto visit(const syntax::intrinsic &x) {
-			return std::make_shared<value::intrinsic>(x);
+			value::ptr r = nullptr;
+
+			if(x == "int") {
+				r = std::make_shared<analysis::value::intr_int>();
+			} else {
+				std::ostringstream s;
+				s << "analysis::semantics: unknown intrinsic: " << x;
+				auto str = s.str();
+
+				std::cerr << str << std::endl << std::endl;
+				throw std::runtime_error(s.str());
+			}
+
+			return r;
 		}
 
 		auto visit(const syntax::integer &i) {

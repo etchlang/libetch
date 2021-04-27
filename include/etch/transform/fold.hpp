@@ -11,7 +11,6 @@ namespace etch::transform {
 
 			if(std::dynamic_pointer_cast<analysis::value::constant_int>(val)) {
 			} else if(std::dynamic_pointer_cast<analysis::value::identifier>(val)) {
-			} else if(std::dynamic_pointer_cast<analysis::value::intrinsic>(val)) {
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 				call->fn = run(call->fn);
 				call->arg = run(call->arg);

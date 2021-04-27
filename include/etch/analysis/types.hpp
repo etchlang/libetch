@@ -146,22 +146,6 @@ namespace etch::analysis {
 			}
 		};
 
-		struct intrinsic : base {
-			using string_type = std::string;
-
-			string_type str;
-
-			intrinsic(string_type str) : str(str) {}
-
-			ptr type() const {
-				return std::make_shared<type_unresolved>();
-			}
-
-			std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
-				return s << "(intrinsic " << str << ')';
-			}
-		};
-
 		struct definition : base {
 			ptr binding;
 			ptr val;

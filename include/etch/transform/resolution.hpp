@@ -63,10 +63,6 @@ namespace etch::transform {
 				} else if(id->str == "*") {
 					r = std::make_shared<analysis::value::intr_mul>();
 				}
-			} else if(auto intr = std::dynamic_pointer_cast<analysis::value::intrinsic>(val)) {
-				if(intr->str == "int") {
-					r = std::make_shared<analysis::value::intr_int>();
-				}
 			} else if(auto call = std::dynamic_pointer_cast<analysis::value::call>(val)) {
 				call->fn = run(call->fn);
 				call->arg = run(call->arg);

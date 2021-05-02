@@ -1,7 +1,7 @@
 #ifndef ETCH_CODEGEN_HPP
 #define ETCH_CODEGEN_HPP 1
 
-#include <etch/analysis/types.hpp>
+#include <etch/ir/types.hpp>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
@@ -40,16 +40,16 @@ namespace etch {
 	  public:
 		codegen(std::shared_ptr<llvm::LLVMContext> ctx, std::shared_ptr<llvm::Module> m) : ctx(ctx), m(m) {}
 
-		void bind(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr, llvm::Value *);
+		void bind(std::shared_ptr<scope>, llvm::IRBuilder<> &, ir::ptr, llvm::Value *);
 
-		llvm::Type     * type(analysis::value::ptr);
-		llvm::Constant * constant(analysis::value::ptr);
-		llvm::Function * function(std::string, std::shared_ptr<analysis::value::function>);
-		llvm::Value    * local(std::shared_ptr<scope>, llvm::IRBuilder<> &, analysis::value::ptr);
-		llvm::Constant * global(analysis::value::ptr);
+		llvm::Type     * type(ir::ptr);
+		llvm::Constant * constant(ir::ptr);
+		llvm::Function * function(std::string, std::shared_ptr<ir::function>);
+		llvm::Value    * local(std::shared_ptr<scope>, llvm::IRBuilder<> &, ir::ptr);
+		llvm::Constant * global(ir::ptr);
 
-		void run(std::shared_ptr<analysis::value::module_>);
-		void run(const analysis::unit &);
+		void run(std::shared_ptr<ir::module_>);
+		void run(const ir::unit &);
 	};
 } // namespace etch
 

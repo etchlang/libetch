@@ -23,7 +23,7 @@ namespace etch::analysis {
 		}
 
 		template<typename... Ts>
-		ir::ptr visit(const syntax::x3::variant<Ts...> &x) {
+		ir::ptr<ir::base> visit(const syntax::x3::variant<Ts...> &x) {
 			return boost::apply_visitor([this](auto &&sv) {
 				return std::static_pointer_cast<ir::base>(visit(sv));
 			}, x);
@@ -50,7 +50,7 @@ namespace etch::analysis {
 		}
 
 		auto visit(const syntax::intrinsic &x) {
-			ir::ptr r = nullptr;
+			ir::ptr<ir::base> r = nullptr;
 
 			if(x == "int") {
 				r = std::make_shared<ir::intr_int>();
@@ -83,7 +83,7 @@ namespace etch::analysis {
 		}
 
 		auto visit(const syntax::op &so) {
-			std::shared_ptr<ir::call> c;
+			ir::ptr<ir::call> c;
 
 			auto lhs = visit(so.lhs);
 			auto rhs = visit(so.rhs);

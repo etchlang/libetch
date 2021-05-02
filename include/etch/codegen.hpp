@@ -40,15 +40,15 @@ namespace etch {
 	  public:
 		codegen(std::shared_ptr<llvm::LLVMContext> ctx, std::shared_ptr<llvm::Module> m) : ctx(ctx), m(m) {}
 
-		void bind(std::shared_ptr<scope>, llvm::IRBuilder<> &, ir::ptr, llvm::Value *);
+		void bind(std::shared_ptr<scope>, llvm::IRBuilder<> &, ir::ptr<ir::base>, llvm::Value *);
 
-		llvm::Type     * type(ir::ptr);
-		llvm::Constant * constant(ir::ptr);
-		llvm::Function * function(std::string, std::shared_ptr<ir::function>);
-		llvm::Value    * local(std::shared_ptr<scope>, llvm::IRBuilder<> &, ir::ptr);
-		llvm::Constant * global(ir::ptr);
+		llvm::Type     * type(ir::ptr<ir::base>);
+		llvm::Constant * constant(ir::ptr<ir::base>);
+		llvm::Function * function(std::string, ir::ptr<ir::function>);
+		llvm::Value    * local(std::shared_ptr<scope>, llvm::IRBuilder<> &, ir::ptr<ir::base>);
+		llvm::Constant * global(ir::ptr<ir::base>);
 
-		void run(std::shared_ptr<ir::module_>);
+		void run(ir::ptr<ir::module_>);
 		void run(const ir::unit &);
 	};
 } // namespace etch

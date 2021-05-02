@@ -3,12 +3,12 @@
 #include <sstream>
 
 namespace etch {
-	llvm::Type * codegen::type(ir::ptr ty) {
+	llvm::Type * codegen::type(ir::ptr<ir::base> ty) {
 		llvm::Type *r = nullptr;
 
-		if(auto ty_int = std::dynamic_pointer_cast<ir::type_int>(ty)) {
+		if(auto ty_int = ir::as<ir::type_int>(ty)) {
 			r = llvm::Type::getIntNTy(*ctx, (unsigned int)ty_int->width);
-		} else if(auto ty_tuple = std::dynamic_pointer_cast<ir::tuple>(ty)) {
+		} else if(auto ty_tuple = ir::as<ir::tuple>(ty)) {
 			if(ty_tuple->vals.empty()) {
 				r = llvm::Type::getVoidTy(*ctx);
 			} else {
@@ -19,7 +19,7 @@ namespace etch {
 
 				r = llvm::StructType::get(*ctx, lty_vals);
 			}
-		} else if(auto ty_fn = std::dynamic_pointer_cast<ir::function>(ty)) {
+		} else if(auto ty_fn = ir::as<ir::function>(ty)) {
 			std::vector<llvm::Type *> lty_args;
 
 			auto lty_arg = type(ty_fn->arg);
@@ -47,14 +47,14 @@ namespace etch {
 		return r;
 	}
 
-	llvm::Constant * codegen::constant(ir::ptr val) {
+	llvm::Constant * codegen::constant(ir::ptr<ir::base> val) {
 		llvm::Constant *r = nullptr;
 
 		auto ty = val->type();
 		auto lty = type(ty);
 
-		if(auto val_int = std::dynamic_pointer_cast<ir::constant_int>(val)) {
-			if(auto ty_int = std::dynamic_pointer_cast<ir::type_int>(ty)) {
+		if(auto val_int = ir::as<ir::constant_int>(val)) {
+			if(auto ty_int = ir::as<ir::type_int>(ty)) {
 				llvm::APInt ap((unsigned int)ty_int->width, val_int->val);
 				r = llvm::Constant::getIntegerValue(lty, ap);
 			}
@@ -63,10 +63,10 @@ namespace etch {
 		return r;
 	}
 
-	void codegen::bind(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, ir::ptr val, llvm::Value *lval) {
-		if(auto id = std::dynamic_pointer_cast<ir::identifier>(val)) {
+	void codegen::bind(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, ir::ptr<ir::base> val, llvm::Value *lval) {
+		if(auto id = ir::as<ir::identifier>(val)) {
 			scp->push(id->str, lval);
-		} else if(auto tuple = std::dynamic_pointer_cast<ir::tuple>(val)) {
+		} else if(auto tuple = ir::as<ir::tuple>(val)) {
 			for(size_t i = 0; i < tuple->vals.size(); ++i) {
 				std::array<unsigned, 1> indices = {(unsigned)i};
 				auto el = builder.CreateExtractValue(lval, indices);
@@ -83,7 +83,7 @@ namespace etch {
 		}
 	}
 
-	llvm::Function * codegen::function(std::string name, std::shared_ptr<ir::function> fn) {
+	llvm::Function * codegen::function(std::string name, ir::ptr<ir::function> fn) {
 		auto scp = std::make_shared<scope>(scope_module);
 
 		auto ty = fn->type();
@@ -106,12 +106,12 @@ namespace etch {
 		return f;
 	}
 
-	llvm::Value * codegen::local(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, ir::ptr val) {
+	llvm::Value * codegen::local(std::shared_ptr<scope> scp, llvm::IRBuilder<> &builder, ir::ptr<ir::base> val) {
 		llvm::Value *r = nullptr;
 
-		if(auto i = std::dynamic_pointer_cast<ir::constant_int>(val)) {
+		if(auto i = ir::as<ir::constant_int>(val)) {
 			r = constant(i);
-		} else if(auto id = std::dynamic_pointer_cast<ir::identifier>(val)) {
+		} else if(auto id = ir::as<ir::identifier>(val)) {
 			auto sym = scp->find(id->str);
 			if(llvm::isa<llvm::GlobalVariable>(sym) || llvm::isa<llvm::GlobalAlias>(sym)) {
 				auto lty = sym->getType()->getPointerElementType();
@@ -119,14 +119,14 @@ namespace etch {
 			} else {
 				r = sym;
 			}
-		} else if(auto call = std::dynamic_pointer_cast<ir::call>(val)) {
-			if(std::dynamic_pointer_cast<ir::intr_add>(call->fn)) {
-				auto tuple = std::dynamic_pointer_cast<ir::tuple>(call->arg);
+		} else if(auto call = ir::as<ir::call>(val)) {
+			if(ir::is<ir::intr_add>(call->fn)) {
+				auto tuple = ir::as<ir::tuple>(call->arg);
 				auto lhs = local(scp, builder, tuple->vals[0]);
 				auto rhs = local(scp, builder, tuple->vals[1]);
 				r = builder.CreateAdd(lhs, rhs);
-			} else if(std::dynamic_pointer_cast<ir::intr_mul>(call->fn)) {
-				auto tuple = std::dynamic_pointer_cast<ir::tuple>(call->arg);
+			} else if(ir::is<ir::intr_mul>(call->fn)) {
+				auto tuple = ir::as<ir::tuple>(call->arg);
 				auto lhs = local(scp, builder, tuple->vals[0]);
 				auto rhs = local(scp, builder, tuple->vals[1]);
 				r = builder.CreateMul(lhs, rhs);
@@ -149,12 +149,12 @@ namespace etch {
 					r = c;
 				}
 			}
-		} else if(auto def = std::dynamic_pointer_cast<ir::definition>(val)) {
+		} else if(auto def = ir::as<ir::definition>(val)) {
 			auto val = local(scp, builder, def->val);
 			bind(scp, builder, def->binding, val);
 
 			r = val;
-		} else if(auto tuple = std::dynamic_pointer_cast<ir::tuple>(val)) {
+		} else if(auto tuple = ir::as<ir::tuple>(val)) {
 			auto lty = type(tuple->type());
 			if(!lty->isVoidTy()) {
 				llvm::Value *result = llvm::PoisonValue::get(lty);
@@ -167,11 +167,11 @@ namespace etch {
 
 				r = result;
 			}
-		} else if(auto block = std::dynamic_pointer_cast<ir::block>(val)) {
+		} else if(auto block = ir::as<ir::block>(val)) {
 			for(auto &val : block->vals) {
 				r = local(scp, builder, val);
 			}
-		} else if(auto fn = std::dynamic_pointer_cast<ir::function>(val)) {
+		} else if(auto fn = ir::as<ir::function>(val)) {
 			stack.emplace_back("anon");
 			auto mangled = mangle(stack);
 			stack.pop_back();
@@ -190,26 +190,26 @@ namespace etch {
 		return r;
 	}
 
-	llvm::Constant * codegen::global(ir::ptr val) {
+	llvm::Constant * codegen::global(ir::ptr<ir::base> val) {
 		llvm::Constant *r = nullptr;
 
 		auto ty = val->type();
 
 		auto mangled = mangle(stack);
 
-		if(auto i = std::dynamic_pointer_cast<ir::constant_int>(val)) {
+		if(auto i = ir::as<ir::constant_int>(val)) {
 			auto c = constant(i);
 			r = new llvm::GlobalVariable(*m, c->getType(), true, llvm::GlobalValue::ExternalLinkage, c, mangled);
-		} else if(auto id = std::dynamic_pointer_cast<ir::identifier>(val)) {
+		} else if(auto id = ir::as<ir::identifier>(val)) {
 			auto gv = llvm::cast<llvm::GlobalValue>(scope_module->find(id->str));
 			r = llvm::GlobalAlias::create(mangled, gv);
-		} else if(auto def = std::dynamic_pointer_cast<ir::definition>(val)) {
+		} else if(auto def = ir::as<ir::definition>(val)) {
 			r = global(def->val);
-		} else if(auto fn = std::dynamic_pointer_cast<ir::function>(val)) {
+		} else if(auto fn = ir::as<ir::function>(val)) {
 			r = function(mangled, fn);
-		} else if(auto m = std::dynamic_pointer_cast<ir::module_>(val)) {
+		} else if(auto m = ir::as<ir::module_>(val)) {
 			run(m);
-		} else if(std::dynamic_pointer_cast<ir::type_int>(val)) {
+		} else if(ir::is<ir::type_int>(val)) {
 		} else {
 			std::ostringstream s;
 			s << "codegen: unhandled global: ";
@@ -223,10 +223,10 @@ namespace etch {
 		return r;
 	}
 
-	void codegen::run(std::shared_ptr<ir::module_> am) {
+	void codegen::run(ir::ptr<ir::module_> am) {
 		for(auto &val : am->defs) {
-			if(auto def = std::dynamic_pointer_cast<ir::definition>(val)) {
-				auto id = std::dynamic_pointer_cast<ir::identifier>(def->binding);
+			if(auto def = ir::as<ir::definition>(val)) {
+				auto id = ir::as<ir::identifier>(def->binding);
 				std::string scope_name = id ? id->str : "anon";
 
 				stack.emplace_back(scope_name);

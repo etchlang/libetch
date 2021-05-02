@@ -7,11 +7,12 @@
 #include <vector>
 
 namespace etch::ir {
-	using ptr = std::shared_ptr<class base>;
+	template<typename T>
+	using ptr = std::shared_ptr<T>;
 
 	class base {
 	  public:
-		virtual ptr type() const = 0;
+		virtual ptr<base> type() const = 0;
 
 		static std::ostream & dump_depth(std::ostream &s, size_t depth) {
 			for(size_t i = 0; i < depth; ++i) { s << "| "; }
@@ -36,13 +37,23 @@ namespace etch::ir {
 		virtual std::ostream & dump_impl(std::ostream &s, size_t depth) const = 0;
 	};
 
+	template<typename T>
+	inline ptr<T> as(ptr<base> val) {
+		return std::dynamic_pointer_cast<T>(val);
+	}
+
+	template<typename T>
+	inline bool is(ptr<base> val) {
+		return bool(as<T>(val));
+	}
+
 	struct cast : base {
-		ptr ty;
-		ptr val;
+		ptr<base> ty;
+		ptr<base> val;
 
-		cast(ptr val, ptr ty) : val(val), ty(ty) {}
+		cast(ptr<base> val, ptr<base> ty) : val(val), ty(ty) {}
 
-		ptr type() const {
+		ptr<base> type() const {
 			return ty;
 		}
 
@@ -54,7 +65,7 @@ namespace etch::ir {
 	};
 
 	struct type_type : base {
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<type_type>();
 		}
 
@@ -64,7 +75,7 @@ namespace etch::ir {
 	};
 
 	struct type_unresolved : base {
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<type_type>();
 		}
 
@@ -74,7 +85,7 @@ namespace etch::ir {
 	};
 
 	struct type_any : base {
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<type_type>();
 		}
 
@@ -88,7 +99,7 @@ namespace etch::ir {
 
 		type_int(size_t width) : width(width) {}
 
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<type_type>();
 		}
 
@@ -103,7 +114,7 @@ namespace etch::ir {
 
 		constant_int(int32_t val, size_t width = 32) : val(val), width(width) {}
 
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<type_int>(width);
 		}
 
@@ -114,7 +125,7 @@ namespace etch::ir {
 
 	struct identifier : base {
 	  private:
-		ptr resolved;
+		ptr<base> resolved;
 	  public:
 		using string_type = std::string;
 
@@ -122,11 +133,11 @@ namespace etch::ir {
 
 		identifier(string_type str = "") : str(str) {}
 
-		ptr type() const {
+		ptr<base> type() const {
 			return resolved ? resolved : std::make_shared<type_unresolved>();
 		}
 
-		void resolve(ptr ty) {
+		void resolve(ptr<base> ty) {
 			resolved = ty;
 		}
 
@@ -136,14 +147,14 @@ namespace etch::ir {
 	};
 
 	struct definition : base {
-		ptr binding;
-		ptr val;
+		ptr<base> binding;
+		ptr<base> val;
 
-		ptr type() const {
+		ptr<base> type() const {
 			return val->type();
 		}
 
-		definition(ptr binding, ptr val) : binding(binding), val(val) {}
+		definition(ptr<base> binding, ptr<base> val) : binding(binding), val(val) {}
 
 		std::ostream & dump_impl(std::ostream &s, size_t depth = 0) const override {
 			s << "(definition" << std::endl;
@@ -154,9 +165,9 @@ namespace etch::ir {
 	};
 
 	struct tuple : base {
-		std::vector<ptr> vals;
+		std::vector<ptr<base>> vals;
 
-		ptr type() const {
+		ptr<base> type() const {
 			auto r = std::make_shared<tuple>();
 			for(auto &val : vals) {
 				r->push_back(val->type());
@@ -164,7 +175,7 @@ namespace etch::ir {
 			return r;
 		}
 
-		void push_back(ptr x) {
+		void push_back(ptr<base> x) {
 			vals.push_back(x);
 		}
 
@@ -182,9 +193,9 @@ namespace etch::ir {
 	};
 
 	struct block : base {
-		std::vector<ptr> vals;
+		std::vector<ptr<base>> vals;
 
-		ptr type() const {
+		ptr<base> type() const {
 			if(vals.empty()) {
 				return std::make_shared<tuple>();
 			} else {
@@ -192,7 +203,7 @@ namespace etch::ir {
 			}
 		}
 
-		void push_back(ptr x) {
+		void push_back(ptr<base> x) {
 			vals.push_back(x);
 		}
 
@@ -210,12 +221,12 @@ namespace etch::ir {
 	};
 
 	struct function : base {
-		ptr arg;
-		ptr body;
+		ptr<base> arg;
+		ptr<base> body;
 
-		function(ptr arg, ptr body) : arg(arg), body(body) {}
+		function(ptr<base> arg, ptr<base> body) : arg(arg), body(body) {}
 
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<function>(arg->type(), body->type());
 		}
 
@@ -228,13 +239,13 @@ namespace etch::ir {
 	};
 
 	struct call : base {
-		ptr fn;
-		ptr arg;
+		ptr<base> fn;
+		ptr<base> arg;
 
-		call(ptr fn, ptr arg) : fn(fn), arg(arg) {}
+		call(ptr<base> fn, ptr<base> arg) : fn(fn), arg(arg) {}
 
-		ptr type() const {
-			if(auto fty = std::dynamic_pointer_cast<function>(fn->type())) {
+		ptr<base> type() const {
+			if(auto fty = as<function>(fn->type())) {
 				return fty->body;
 			} else {
 				return std::make_shared<type_unresolved>();
@@ -250,9 +261,9 @@ namespace etch::ir {
 	};
 
 	struct module_ : base {
-		std::vector<ptr> defs;
+		std::vector<ptr<base>> defs;
 
-		ptr type() const {
+		ptr<base> type() const {
 			return std::make_shared<type_type>();
 		}
 
@@ -266,7 +277,7 @@ namespace etch::ir {
 	};
 
 	struct intr_int : base {
-		ptr type() const {
+		ptr<base> type() const {
 			auto tyty = std::make_shared<type_type>();
 			auto ity = std::make_shared<type_int>(32);
 			return std::make_shared<function>(ity, tyty);
@@ -278,7 +289,7 @@ namespace etch::ir {
 	};
 
 	struct intr_binop : base {
-		ptr type() const {
+		ptr<base> type() const {
 			auto ity = std::make_shared<type_int>(32);
 
 			auto tty = std::make_shared<tuple>();
@@ -302,7 +313,7 @@ namespace etch::ir {
 	};
 
 	struct unit {
-		std::vector<std::shared_ptr<ir::module_>> modules;
+		std::vector<ptr<ir::module_>> modules;
 
 		std::ostream & dump(std::ostream &s = std::cout, size_t depth = 0) const {
 			base::dump_depth(s, depth) << "(unit" << std::endl;
